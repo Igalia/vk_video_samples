@@ -140,6 +140,7 @@ int32_t VkVideoDecoder::StartVideoSequence(VkParserDetectedVideoFormat* pVideoFo
 
     VkVideoCoreProfile videoProfile(videoCodec, pVideoFormat->chromaSubsampling, pVideoFormat->lumaBitDepth, pVideoFormat->chromaBitDepth,
                                     pVideoFormat->codecProfile);
+#ifndef HEADLESS_AV1
     if (!VulkanVideoCapabilities::IsCodecTypeSupported(m_vkDevCtx,
                                                        m_vkDevCtx->GetVideoDecodeQueueFamilyIdx(),
                                                        videoCodec)) {
@@ -147,6 +148,7 @@ int32_t VkVideoDecoder::StartVideoSequence(VkParserDetectedVideoFormat* pVideoFo
         assert(!"The video codec is not supported");
         return -1;
     }
+#endif
 
     if (m_videoFormat.coded_width && m_videoFormat.coded_height) {
         // CreateDecoder() has been called before, and now there's possible config change
@@ -592,7 +594,7 @@ int VkVideoDecoder::DecodePictureWithParameters(VkParserPerFrameDecodeParameters
     decodeBeginInfo.referenceSlotCount = pCurrFrameDecParams->decodeFrameInfo.referenceSlotCount;
     if (pCurrFrameDecParams->isAV1) {
         // AV1 always keeps a setup slot active.
-        pCurrFrameDecParams->decodeFrameInfo.referenceSlotCount--;
+        //pCurrFrameDecParams->decodeFrameInfo.referenceSlotCount--;
     }    
     decodeBeginInfo.pReferenceSlots = pCurrFrameDecParams->decodeFrameInfo.pReferenceSlots;
     

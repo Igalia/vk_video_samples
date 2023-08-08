@@ -17,6 +17,7 @@
 #ifndef _VULKANAV1DECODER_H_
 #define _VULKANAV1_DECOER_H_
 
+#include "vk_video/vulkan_video_codec_av1std.h"
 #include "vkvideo_parser/StdVideoPictureParametersSet.h"
 #include "VulkanVideoDecoder.h"
 
@@ -513,7 +514,28 @@ typedef struct _av1_ref_frames_s
         uint8_t             preskip_id;
         uint8_t             reserved[3];
     } seg;
+
+    // Temporary variables.
+    uint32_t                primary_ref_frame; // if not 0 -- may not alloc a slot. Re-resolve this per frame per dpb index.
+    uint32_t                base_q_index;
+    bool                    disable_frame_end_update_cdf;
+    bool                    segmentation_enabled;
+
+    int8_t                  RefFrameSignBias[8];
+    uint8_t                 ref_order_hint[8];
+    uint8_t                 order_hint;
+    // 
+    //int32_t                 ref_frame_map;
+    //int32_t                 ref_frame_id;
+    //int32_t                 RefValid;
+    //int32_t                 ref_frame_idx;
+    //int32_t                 active_ref_idx;
+    //
+    //int32_t                 RefOrderHint;
 } av1_ref_frames_s;
+
+
+
 
 // AV1 decoder class
 class VulkanAV1Decoder : public VulkanVideoDecoder
@@ -563,18 +585,20 @@ protected:
 
     // global motion
     AV1WarpedMotionParams       global_motions[GM_GLOBAL_MODELS_PER_FRAME];
-    
-    int32_t                     ref_frame_map[NUM_REF_FRAMES];
+#if 1
+    int32_t                     ref_frame_names[NUM_REF_FRAMES]; // Map between ref_frame_idx and 
     int32_t                     ref_frame_id[NUM_REF_FRAMES];
     int32_t                     RefValid[NUM_REF_FRAMES];
     int32_t                     ref_frame_idx[REFS_PER_FRAME];
-    int32_t                     active_ref_idx[REFS_PER_FRAME];
+    int32_t                     active_ref_names[REFS_PER_FRAME]; //rename active_ref_names
 
     int32_t                     RefOrderHint[NUM_REF_FRAMES];
+#endif
+    av1_ref_frames_s            m_pBuffers[NUM_REF_FRAMES];
 
     VkPicIf*                    m_pCurrPic;
     VkPicIf*                    m_pFGSPic;
-    av1_ref_frames_s            m_pBuffers[NUM_REF_FRAMES];
+    
     bool                        m_bDisableFGS;
     bool                        m_bOutputAllLayers;
     int32_t                     m_OperatingPointIDCActive;
@@ -637,7 +661,7 @@ protected:
             case 2: return read_u16_le(src);
             case 3: return read_u24_le(src);
             case 4: return read_u32_le(src);
-            default: assert(0 && "Invalid size"); return -1;
+            default: assert(0 && "Invalid size"); return (size_t)(-1);
         }
     }
 
@@ -686,6 +710,7 @@ protected:
 
     void                    CreatePrivateContext() {}
     void                    FreeContext() {}
+    int                     GetRelativeDist(int a, int b);
 };
 #endif // ENABLE_AV1_DECODER
 

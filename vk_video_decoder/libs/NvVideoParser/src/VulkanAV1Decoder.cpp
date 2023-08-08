@@ -43,7 +43,7 @@ VulkanAV1Decoder::VulkanAV1Decoder(VkVideoCodecOperationFlagBitsKHR std)
         m_pBuffers[i].fgs_buffer = nullptr;
     }
     for (int i = 0; i < NUM_REF_FRAMES; i++) {
-        ref_frame_map[i] = i;
+        ref_frame_names[i] = i;
         ref_frame_id[i] = -1;
     }
     temporal_id = 0;
@@ -357,21 +357,58 @@ bool VulkanAV1Decoder::BeginPicture(VkParserPictureData* pnvpd)
     pnvpd->FrameHeightInMbs = nvsi.nCodedHeight >> 4;
     pnvpd->pCurrPic         = m_pFGSPic ? m_pFGSPic : m_pCurrPic;   // pnvpd->pCurrPic is display pic
     pnvpd->progressive_frame = 1;
-    pnvpd->ref_pic_flag     = false;
+    pnvpd->ref_pic_flag     = true;
     pnvpd->chroma_format    = nvsi.nChromaFormat; // 1 : 420
 
     for (int i = 0; i < 7; i++) {
-        av1->ref_frame_map[i] = m_pBuffers[i].buffer;
-        av1->ref_frame[i] = active_ref_idx[i];
+        av1->ref_frame_picture[i] = m_pBuffers[i].buffer;
+        av1->active_ref_names[i] = active_ref_names[i];
+        av1->ref_frame_idx[i] = ref_frame_idx[i];
         av1->ref_global_motion[i].wmtype = global_motions[i].wmtype;
         for (int j = 0; j <= 5; j++) {
             av1->ref_global_motion[i].wmmat[j] = global_motions[i].wmmat[j];
         }
         av1->ref_global_motion[i].invalid = global_motions[i].invalid;
+        // Add a mask of which buffers are being updated.
+        av1->refFrameParams[i].primary_ref_frame = m_pBuffers[i].primary_ref_frame; // if not 0 -- may not alloc a slot. Re-resolve this per frame per dpb index.
+        av1->refFrameParams[i].base_q_index = m_pBuffers[i].base_q_index;
+        av1->refFrameParams[i].disable_frame_end_update_cdf = m_pBuffers[i].disable_frame_end_update_cdf;
+        av1->refFrameParams[i].segmentation_enabled = m_pBuffers[i].segmentation_enabled;
+        av1->refFrameParams[i].frame_type = m_pBuffers[i].frame_type;
+        av1->refFrameParams[i].order_hint = m_pBuffers[i].order_hint;
+        for (int av1name = 0; av1name < (sizeof(av1->refFrameParams[i].ref_order_hint)); av1name += 1 ) {
+            av1->refFrameParams[i].ref_order_hint[av1name] = m_pBuffers[i].ref_order_hint[av1name];
+            av1->refFrameParams[i].RefFrameSignBias[av1name] = m_pBuffers[i].RefFrameSignBias[av1name];
+        }
+
     }
-    av1->ref_frame_map[7] = m_pBuffers[7].buffer;
+
+    //av1->refFrameParams = m_pBuffers; // Issues with includes and 
+
+    // if not 0 -- may not alloc a slot. Re-resolve this per frame per dpb index.
+    // What to do with index [7] ?
+    av1->ref_frame_picture[7] = m_pBuffers[7].buffer;
 
     return true;
+}
+
+int VulkanAV1Decoder::GetRelativeDist(int a, int b)
+{
+    auto sps = m_sps;
+    if (sps->flags.enable_order_hint == false) {
+        return 0;
+    }
+
+    const int bits = sps->order_hint_bits_minus_1 + 1;
+
+    assert(bits >= 1);
+    assert(a >= 0 && a < (1 << bits));
+    assert(b >= 0 && b < (1 << bits));
+
+    int diff = a - b;
+    const int m = 1 << (bits - 1);
+    diff = (diff & (m - 1)) - (diff & m);
+    return diff;
 }
 
 void VulkanAV1Decoder::UpdateFramePointers()
@@ -395,6 +432,19 @@ void VulkanAV1Decoder::UpdateFramePointers()
             m_pBuffers[ref_index].fgs_buffer = showable_frame ? m_pFGSPic : nullptr;
 
             m_pBuffers[ref_index].frame_type = (StdVideoAV1FrameType)pic_info->frame_type;
+            m_pBuffers[ref_index].order_hint = frame_offset;
+            for (uint8_t av1name = 0; av1name < sizeof(pic_info->ref_order_hint); av1name ++) {
+                uint8_t ref_order_hint = 0;
+                if ((ref_frame_idx[av1name] < 8) && (ref_frame_idx[av1name] >= 0)) {
+                    ref_order_hint = pic_info->ref_order_hint[ref_frame_idx[av1name]];
+                } else {
+                    ref_order_hint = frame_offset;
+                }
+
+                m_pBuffers[ref_index].ref_order_hint[av1name] = ref_order_hint;
+                m_pBuffers[ref_index].RefFrameSignBias[av1name] = GetRelativeDist(frame_offset, ref_order_hint);
+            }
+
             // film grain
             memcpy(&m_pBuffers[ref_index].film_grain_params, &pic_info->fgs, sizeof(av1_film_grain_s));
             // global motion
@@ -407,6 +457,11 @@ void VulkanAV1Decoder::UpdateFramePointers()
             memcpy(&m_pBuffers[ref_index].seg.feature_data, pic_info->segmentation_feature_data, sizeof(pic_info->segmentation_feature_data));
             m_pBuffers[ref_index].seg.last_active_id = pic_info->segid_preskip;
             m_pBuffers[ref_index].seg.preskip_id = pic_info->last_active_segid;
+
+            m_pBuffers[ref_index].primary_ref_frame = pic_info->primary_ref_frame;
+            m_pBuffers[ref_index].base_q_index = pic_info->base_qindex;
+            m_pBuffers[ref_index].disable_frame_end_update_cdf = pic_info->disable_frame_end_update_cdf;
+            m_pBuffers[ref_index].segmentation_enabled = pic_info->segmentation_enabled;
 
             RefOrderHint[ref_index] = frame_offset;
 
@@ -956,7 +1011,7 @@ int VulkanAV1Decoder::SetupFrameSizeWithRefs()
         tmp = u(1);
         if (tmp) {
             found = 1;
-            VkPicIf *m_pPic = m_pBuffers[active_ref_idx[i]].buffer;
+            VkPicIf *m_pPic = m_pBuffers[active_ref_names[i]].buffer;
             if (m_pPic) {
                 m_dwWidth = m_pPic->decodeSuperResWidth;
                 m_dwHeight = m_pPic->decodeHeight;
@@ -1411,7 +1466,7 @@ void VulkanAV1Decoder::DecodeSegmentationData()
     } else {
         if (primary_ref_frame != PRIMARY_REF_NONE) {
             // overwrite default values with prev frame data
-            int prim_buf_idx = active_ref_idx[primary_ref_frame];
+            int prim_buf_idx = active_ref_names[primary_ref_frame];
             if (m_pBuffers[prim_buf_idx].buffer) {
                 memcpy(pic_info->segmentation_feature_enable, m_pBuffers[prim_buf_idx].seg.feature_enable, sizeof(pic_info->segmentation_feature_enable));
                 memcpy(pic_info->segmentation_feature_data, m_pBuffers[prim_buf_idx].seg.feature_data, sizeof(pic_info->segmentation_feature_data));
@@ -1442,7 +1497,7 @@ void VulkanAV1Decoder::DecodeLoopFilterdata()
 
     if (primary_ref_frame != PRIMARY_REF_NONE) {
         // overwrite default values with prev frame data
-        int prim_buf_idx = active_ref_idx[primary_ref_frame];
+        int prim_buf_idx = active_ref_names[primary_ref_frame];
         if (m_pBuffers[prim_buf_idx].buffer) {
             memcpy(pic_info->loop_filter_ref_deltas, m_pBuffers[prim_buf_idx].lf_ref_delta, sizeof(lf_ref_delta_default));
             memcpy(pic_info->loop_filter_mode_deltas, m_pBuffers[prim_buf_idx].lf_mode_delta, sizeof(pic_info->loop_filter_mode_deltas));
@@ -1594,7 +1649,7 @@ void VulkanAV1Decoder::SetFrameRefs(int last_frame_idx, int gold_frame_idx)
     int shiftedOrderHints[NUM_REF_FRAMES];
     int Ref_OrderHint;
     int usedFrame[NUM_REF_FRAMES];
-    int ref, hint;
+    int hint;
     for (int i = 0; i < REFS_PER_FRAME; i++) {
         ref_frame_idx[i] = -1;
     }
@@ -1609,13 +1664,13 @@ void VulkanAV1Decoder::SetFrameRefs(int last_frame_idx, int gold_frame_idx)
     usedFrame[gold_frame_idx] = 1;
 
     for (int i = 0; i < NUM_REF_FRAMES; i++) {
-        int mapped_ref = ref_frame_map[i];
-        Ref_OrderHint = RefOrderHint[mapped_ref];
+        int ref_frame_name = ref_frame_names[i];
+        Ref_OrderHint = RefOrderHint[ref_frame_name];
         shiftedOrderHints[i] = curFrameHint + GetRelativeDist1(Ref_OrderHint, OrderHint);
     }
 
     {//ALTREF_FRAME
-        ref = -1;
+        int ref = -1;
         int latestOrderHint = -1;
         for (int i = 0; i < NUM_REF_FRAMES; i++) {
             hint = shiftedOrderHints[i];
@@ -1633,7 +1688,7 @@ void VulkanAV1Decoder::SetFrameRefs(int last_frame_idx, int gold_frame_idx)
     }
 
     {//BWDREF_FRAME
-        ref = -1;
+        int ref = -1;
         int earliestOrderHint = -1;
         for (int i = 0; i < NUM_REF_FRAMES; i++) {
             hint = shiftedOrderHints[i];
@@ -1651,7 +1706,7 @@ void VulkanAV1Decoder::SetFrameRefs(int last_frame_idx, int gold_frame_idx)
     }
 
     {//ALTREF2_FRAME
-        ref = -1;
+        int ref = -1;
         int earliestOrderHint = -1;
         for (int i = 0; i < NUM_REF_FRAMES; i++) {
             hint = shiftedOrderHints[i];
@@ -1673,7 +1728,7 @@ void VulkanAV1Decoder::SetFrameRefs(int last_frame_idx, int gold_frame_idx)
     for (int j = 0; j < REFS_PER_FRAME - 2; j++) {
         int refFrame = Ref_Frame_List[j];
         if (ref_frame_idx[refFrame - LAST_FRAME] < 0) {
-            ref = -1;
+            int ref = -1;
             int latestOrderHint = -1;
             for (int i = 0; i < NUM_REF_FRAMES; i++) {
                 hint = shiftedOrderHints[i];
@@ -1692,7 +1747,7 @@ void VulkanAV1Decoder::SetFrameRefs(int last_frame_idx, int gold_frame_idx)
     }
 
     {
-        ref = -1;
+        int ref = -1;
         int earliestOrderHint = -1;
         for (int i = 0; i < NUM_REF_FRAMES; i++) {
             hint = shiftedOrderHints[i];
@@ -1725,7 +1780,7 @@ int VulkanAV1Decoder::IsSkipModeAllowed()
     int ref0 = -1, ref1 = -1;
     int ref0_off = -1, ref1_off = -1;
     for (int i = 0; i < REFS_PER_FRAME; i++) {
-        int frame_idx = active_ref_idx[i];
+        int frame_idx = active_ref_names[i];
         if (frame_idx != -1) {
             int ref_frame_offset = RefOrderHint[frame_idx];
 
@@ -1754,7 +1809,7 @@ int VulkanAV1Decoder::IsSkipModeAllowed()
         // == Forward prediction only ==
         // Identify the second nearest forward reference.
         for (int i = 0; i < REFS_PER_FRAME; i++) {
-            int frame_idx = active_ref_idx[i];
+            int frame_idx = active_ref_names[i];
             if (frame_idx != -1) {
                 int ref_frame_offset = RefOrderHint[frame_idx];
                 // Forward reference
@@ -1797,7 +1852,7 @@ bool VulkanAV1Decoder::ParseObuFrameHeader()
 
         if (show_existing_frame) {
             int32_t frame_to_show_map_idx = u(3);
-            int32_t show_existing_frame_index = ref_frame_map[frame_to_show_map_idx];
+            int32_t show_existing_frame_index = ref_frame_names[frame_to_show_map_idx];
 
             if (sps->decoder_model_info_present && timing_info.equal_picture_interval == 0) {
                 tu_presentation_delay = u(buffer_model.frame_presentation_time_length);
@@ -1979,10 +2034,10 @@ bool VulkanAV1Decoder::ParseObuFrameHeader()
         }
 
         for (int i = 0; i < REFS_PER_FRAME; i++) {
-            active_ref_idx[i] = 0;
+            active_ref_names[i] = 0;
         }
 
-        // memset(&ref_frame_map, -1, sizeof(ref_frame_map));
+        // memset(&ref_frame_names, -1, sizeof(ref_frame_names));
     } else {
         if (intra_only || pic_info->frame_type != 3) {
             refresh_frame_flags = u(NUM_REF_FRAMES);
@@ -1990,7 +2045,7 @@ bool VulkanAV1Decoder::ParseObuFrameHeader()
                 assert(!"Intra_only frames cannot have refresh flags 0xFF");
             }
 
-            //  memset(&ref_frame_map, -1, sizeof(ref_frame_map));
+            //  memset(&ref_frame_names, -1, sizeof(ref_frame_names));
         } else {
             refresh_frame_flags = (1 << NUM_REF_FRAMES) - 1;
         }
@@ -2001,7 +2056,7 @@ bool VulkanAV1Decoder::ParseObuFrameHeader()
         for (int i = 0; i < NUM_REF_FRAMES; i++) {
             // ref_order_hint[i]
             int offset = u(sps->order_hint_bits_minus_1 + 1);
-            int buf_idx = ref_frame_map[i];
+            int buf_idx = ref_frame_names[i];
             // assert(buf_idx < FRAME_BUFFERS);
             if (buf_idx == -1 || offset != RefOrderHint[buf_idx]) {
                 //RefValid[buf_idx] = 0;
@@ -2030,10 +2085,10 @@ bool VulkanAV1Decoder::ParseObuFrameHeader()
 
             if (frame_refs_short_signaling) {
                 const int lst_ref = u(REF_FRAMES_BITS);
-                const int lst_idx = ref_frame_map[lst_ref];
+                const int lst_idx = ref_frame_names[lst_ref];
 
                 const int gld_ref = u(REF_FRAMES_BITS);
-                const int gld_idx = ref_frame_map[gld_ref];
+                const int gld_idx = ref_frame_names[gld_ref];
 
                 if (lst_idx == -1 || gld_idx == -1) {
                     assert(!"invalid reference");
@@ -2044,17 +2099,17 @@ bool VulkanAV1Decoder::ParseObuFrameHeader()
 
             for (int i = 0; i < REFS_PER_FRAME; i++) {
                 if (!frame_refs_short_signaling) {
-                    int ref_frame_num = u(REF_FRAMES_BITS);
-                    ref_frame_idx[i] = ref_frame_num;
-                    int mapped_ref = ref_frame_map[ref_frame_num];
+                    int ref_frame_index = u(REF_FRAMES_BITS);
+                    ref_frame_idx[i] = ref_frame_index;
+                    int ref_frame_name = ref_frame_names[ref_frame_index];
 
-                    if (mapped_ref == -1) {
+                    if (ref_frame_name == -1) {
                         assert(!"invalid reference");
                     }
-                    active_ref_idx[i] = mapped_ref;
+                    active_ref_names[i] = ref_frame_name;
                 } else {
-                    int mapped_ref = ref_frame_map[ref_frame_idx[i]];
-                    active_ref_idx[i] = mapped_ref;
+                    int ref_frame_name = ref_frame_names[ref_frame_idx[i]];
+                    active_ref_names[i] = ref_frame_name;
                 }
 
                 if (sps->flags.frame_id_numbers_present_flag) {
@@ -2064,7 +2119,7 @@ bool VulkanAV1Decoder::ParseObuFrameHeader()
                     int ref_id = ((current_frame_id - (delta_frame_id_minus_1 + 1) +
                         (1 << frame_id_length)) % (1 << frame_id_length));
 
-                    if (ref_id != ref_frame_id[active_ref_idx[i]] || RefValid[active_ref_idx[i]] == 0) {
+                    if (ref_id != ref_frame_id[active_ref_names[i]] || RefValid[active_ref_names[i]] == 0) {
                         assert(!"Ref frame ID mismatch");
                     }
                 }
@@ -2295,8 +2350,11 @@ void VulkanAV1Decoder::CalcTileOffsets(const uint8_t *base, const uint8_t *end, 
         {
             size = end - ptr;
         }
-        m_pSliceOffsets[2 * tile_id] = offset + (ptr - base);
-        m_pSliceOffsets[2 * tile_id + 1] = size;
+
+        assert((ptr - base) < INT_MAX);
+        assert(size < INT_MAX);
+        m_pSliceOffsets[2 * tile_id] = offset + (int)(ptr - base);
+        m_pSliceOffsets[2 * tile_id + 1] = (int)size;
         ptr += size;
     }
 }
@@ -2386,7 +2444,8 @@ bool VulkanAV1Decoder::ParseOneFrame(const uint8_t* pdatain, int32_t datasize, c
             uint32_t tileGroupSizeBytes = hdr.payload_size - consumedBytes;
             uint8_t* pTileGroupPayloadDataStart = (uint8_t*)pdatain + hdr.header_size + consumedBytes;
             uint8_t* pTileGroupPayloadDataEnd = pTileGroupPayloadDataStart + tileGroupSizeBytes;
-            uint32_t tileGroupStartOffestInOBU = m_nalu.start_offset + consumedBytes;
+            assert((m_nalu.start_offset + consumedBytes) < UINT_MAX);
+            uint32_t tileGroupStartOffestInOBU = (uint32_t)(m_nalu.start_offset) + consumedBytes;
             bool bStatus = true;
             CalcTileOffsets(pTileGroupPayloadDataStart, pTileGroupPayloadDataEnd, tileGroupStartOffestInOBU, tile_start, tile_end);
             bStatus = end_of_picture(pTileGroupPayloadDataStart, tileGroupSizeBytes, tileGroupStartOffestInOBU);

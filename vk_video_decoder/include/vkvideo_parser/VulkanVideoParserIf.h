@@ -22,6 +22,7 @@
 #include "vkvideo_parser/StdVideoPictureParametersSet.h"
 #include "VulkanBitstreamBuffer.h"
 #include "vk_video/vulkan_video_codecs_common.h"
+//#include "VulkanAV1Decoder.h"
 
 #define NV_VULKAN_VIDEO_PARSER_API_VERSION_0_9_9 VK_MAKE_VIDEO_STD_VERSION(0, 9, 9)
 
@@ -363,8 +364,127 @@ typedef struct VkParserAv1GlobalMotionParameters {
     int8_t reserved[3];
 } VkParserAv1GlobalMotionParameters;
 
+#define AV1_MAX_DPB_SLOTS 8
+#define NUM_REF_FRAMES              8
+
+typedef struct ExtraAV1Parameters {
+    uint32_t                primary_ref_frame; // if not 0 -- may not alloc a slot. Re-resolve this per frame per dpb index.
+    uint32_t                base_q_index;
+    bool                    disable_frame_end_update_cdf;
+    bool                    segmentation_enabled;
+    uint32_t                frame_type;
+    uint8_t                 order_hint;
+    uint8_t                 ref_order_hint[8];
+    int8_t                  RefFrameSignBias[8];
+} ExtraAV1Parameters;
+
+/*
+#define GM_GLOBAL_MODELS_PER_FRAME  7
+
+// global motion
+typedef enum _AV1_TRANSFORMATION_TYPE
+{
+    IDENTITY          = 0,        // identity transformation, 0-parameter
+    TRANSLATION       = 1,        // translational motion 2-parameter
+    ROTZOOM           = 2,        // simplified affine with rotation + zoom only, 4-parameter
+    AFFINE            = 3,        // affine, 6-parameter
+    TRANS_TYPES,
+} AV1_TRANSFORMATION_TYPE;
+
+struct AV1WarpedMotionParams 
+{
+  AV1_TRANSFORMATION_TYPE wmtype;
+  int32_t wmmat[6];
+  int8_t invalid;
+};
+
+typedef struct _av1_film_grain_s {
+    uint16_t        apply_grain              : 1;
+    uint16_t        update_grain             : 1;
+    uint16_t        scaling_shift_minus8     : 2;
+    uint16_t        chroma_scaling_from_luma : 1;
+    uint16_t        overlap_flag             : 1;
+    uint16_t        ar_coeff_shift_minus6    : 2;
+    uint16_t        ar_coeff_lag             : 2;
+    uint16_t        grain_scale_shift        : 2;
+    uint16_t        clip_to_restricted_range : 1;
+    uint16_t        reserved                 : 3;
+
+    uint16_t        grain_seed;
+
+    uint8_t         num_y_points;
+    uint8_t         scaling_points_y[14][2];
+    uint8_t         num_cb_points;
+    uint8_t         scaling_points_cb[10][2];
+    uint8_t         num_cr_points;
+    uint8_t         scaling_points_cr[10][2];
+
+    int16_t         ar_coeffs_y[24];
+    int16_t         ar_coeffs_cb[25];
+    int16_t         ar_coeffs_cr[25];
+    uint8_t         cb_mult;       // 8 bits
+    uint8_t         cb_luma_mult;  // 8 bits
+    int16_t         cb_offset;    // 9 bits
+    uint8_t         cr_mult;       // 8 bits
+    uint8_t         cr_luma_mult;  // 8 bits
+    int16_t         cr_offset;    // 9 bits
+} av1_film_grain_s;
+
+typedef struct _GlobalMotionParams {
+    uint32_t        wmtype;
+    int32_t         wmmat[6];
+    int8_t          invalid;
+    int8_t          reserved[3];
+} GlobalMotionParams;
+
+typedef struct _av1_ref_frames_s
+{
+    VkPicIf*                buffer;
+    VkPicIf*                fgs_buffer;
+    StdVideoAV1FrameType    frame_type;
+    av1_film_grain_s        film_grain_params;
+    AV1WarpedMotionParams   global_models[GM_GLOBAL_MODELS_PER_FRAME];
+    int8_t                  lf_ref_delta[NUM_REF_FRAMES];
+    int8_t                  lf_mode_delta[2];
+    bool                    showable_frame;
+    struct
+    {
+        int16_t             feature_enable[8][8];
+        int16_t             feature_data[8][8];
+        int32_t             last_active_id;
+        uint8_t             preskip_id;
+        uint8_t             reserved[3];
+    } seg;
+
+    // Temporary variables.
+    uint32_t                primary_ref_frame; // if not 0 -- may not alloc a slot. Re-resolve this per frame per dpb index.
+    uint32_t                base_q_index;
+    bool                    disable_frame_end_update_cdf;
+    bool                    segmentation_enabled;
+
+    // 
+    //int32_t                 ref_frame_map;
+    //int32_t                 ref_frame_id;
+    //int32_t                 RefValid;
+    //int32_t                 ref_frame_idx;
+    //int32_t                 active_ref_idx;
+    //
+    //int32_t                 RefOrderHint;
+} av1_ref_frames_s;*/
+
 typedef struct VkParserAv1PictureData {
     const StdVideoPictureParametersSet*     pStdSps;
+
+
+    //VkPicIf* RefPics[8]; // Read directly from ref_frame_map
+    int32_t PicOrderCntVal[8]; // Populated in the loop in FillDpbAV1State.
+
+    int32_t NumPocStCurrBefore; // Data is: ARRAYSIZE(pStdPictureInfo->pFrameHeader->ref_frame_idx);
+    int32_t RefPicSetStCurrBefore[8]; // Unpopulated, why is this needed?
+    int32_t NumPocStCurrAfter; // Data is: ARRAYSIZE(pStdPictureInfo->pFrameHeader->ref_frame_idx);
+    int32_t RefPicSetStCurrAfter[8]; // Unpopulated, why is this needed?
+    int32_t NumPocLtCurr; // Data is: ARRAYSIZE(pStdPictureInfo->pFrameHeader->ref_frame_idx); 
+    int32_t RefPicSetLtCurr[8]; // Unpopulated, why is this needed?
 
     VkPicIf* pDecodePic;
     uint32_t width;
@@ -500,9 +620,13 @@ typedef struct VkParserAv1PictureData {
     // order: Last frame,Last2 frame,Last3 frame,Golden frame,BWDREF frame,ALTREF2
     // frame,ALTREF frame
     uint8_t primary_ref_frame;
-    uint8_t ref_frame[7];
-    VkPicIf* ref_frame_map[8];
+    uint8_t active_ref_names[7]; // Rename to active_ref_names
+    uint8_t ref_frame_idx[8];
+    VkPicIf* ref_frame_picture[8];
     uint8_t ref_order_hint[8];
+
+    //av1_ref_frames_s* refFrameParams;
+    ExtraAV1Parameters refFrameParams[8];
 
     uint8_t refresh_frame_flags;
 

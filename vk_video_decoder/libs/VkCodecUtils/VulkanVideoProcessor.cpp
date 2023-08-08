@@ -126,6 +126,17 @@ int32_t VulkanVideoProcessor::Initialize(const VulkanDeviceContext* vkDevCtx,
                                     m_videoStreamDemuxer->GetChromaBitDepth(),
                                     m_videoStreamDemuxer->GetProfileIdc());
 
+
+#if HEADLESS_AV1
+    if (VK_VIDEO_CODEC_OPERATION_DECODE_AV1_BIT_KHR != m_videoStreamDemuxer->GetVideoCodec()) {
+        assert(!"The video codec is not supported");
+        return -1;
+    }
+
+    VkVideoCapabilitiesKHR videoCapabilities;
+    videoCapabilities.minBitstreamBufferOffsetAlignment = 256;
+    videoCapabilities.minBitstreamBufferSizeAlignment = 256;
+#else
     if (!VulkanVideoCapabilities::IsCodecTypeSupported(vkDevCtx,
                                                        vkDevCtx->GetVideoDecodeQueueFamilyIdx(),
                                                        m_videoStreamDemuxer->GetVideoCodec())) {
@@ -145,6 +156,7 @@ int32_t VulkanVideoProcessor::Initialize(const VulkanDeviceContext* vkDevCtx,
         assert(!"Could not get Video Capabilities!");
         return -result;
     }
+#endif
 
     const uint32_t defaultMinBufferSize = 2 * 1024 * 1024; // 2MB
     result = CreateParser(filePath,
@@ -499,11 +511,12 @@ size_t VulkanVideoProcessor::ConvertFrameToNv12(DecodedFrame* pFrame,
         uint16_t *pCbDst16 = (uint16_t *)(pOutBuffer + yuvPlaneLayouts[1].offset);
         uint16_t *pCrDst16 = (uint16_t *)(pOutBuffer + yuvPlaneLayouts[2].offset);
 
+        assert(((layouts[1].rowPitch / 2) * secondaryPlaneHeight) < std::numeric_limits<uint16_t>::max());
         for (int height = 0; height < secondaryPlaneHeight; height++)
         {
-            int samplesInRow = yuvPlaneLayouts[1].rowPitch;
-            int interleavedSamplesInRow = samplesInRow / 2;
-            for (int interleavedSampleIdx = 0; interleavedSampleIdx < interleavedSamplesInRow; interleavedSampleIdx++)
+            VkDeviceSize samplesInRow = yuvPlaneLayouts[1].rowPitch;
+            VkDeviceSize interleavedSamplesInRow = samplesInRow / 2;
+            for (VkDeviceSize interleavedSampleIdx = 0; interleavedSampleIdx < interleavedSamplesInRow; interleavedSampleIdx++)
             {
                 *pCbDst16++ = pSrc16[2 * interleavedSampleIdx];
                 *pCrDst16++ = pSrc16[2 * interleavedSampleIdx + 1];
@@ -515,16 +528,16 @@ size_t VulkanVideoProcessor::ConvertFrameToNv12(DecodedFrame* pFrame,
         if (false)
         {
             // Sometimes the driver reports .size = 0 (but a correct rowPictch), so this simplisitic approach doesn't work always..
-            int numWords = layouts[1].size / (2 * sizeof(uint16_t));
+            VkDeviceSize numWords = layouts[1].size / (2 * sizeof(uint16_t));
 
-            for (int i = 0; i < numWords; i++) {
+            for (size_t i = 0; i < numWords; i++) {
                 *pCbDst16++ = *pSrc16;
                 pSrc16 += 2;
             }
 
             pSrc16 = (uint16_t *)pSrc;
             pSrc16++;
-            for (int i = 0; i < numWords; i++) {
+            for (size_t i = 0; i < numWords; i++) {
                 *pCrDst16++ = *pSrc16;
                 pSrc16 += 2;
             }

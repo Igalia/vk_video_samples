@@ -19,14 +19,16 @@ extern "C" {
 
 
 
+// vulkan_video_codec_av1std is a preprocessor guard. Do not pass it to API calls.
 #define vulkan_video_codec_av1std 1
-#define STD_VIDEO_AV1_TOTAL_REFS_PER_FRAME 8
-#define STD_VIDEO_AV1_MAX_SEGMENTS        8
-#define STD_VIDEO_AV1_SEG_LVL_MAX         8
+#include "vulkan_video_codecs_common.h"
 #define STD_VIDEO_AV1_NUM_REF_FRAMES      8
 #define STD_VIDEO_AV1_REFS_PER_FRAME      7
+#define STD_VIDEO_AV1_TOTAL_REFS_PER_FRAME 8
 #define STD_VIDEO_AV1_MAX_TILE_COLS       64
 #define STD_VIDEO_AV1_MAX_TILE_ROWS       64
+#define STD_VIDEO_AV1_MAX_SEGMENTS        8
+#define STD_VIDEO_AV1_SEG_LVL_MAX         8
 #define STD_VIDEO_AV1_PRIMARY_REF_NONE    7
 #define STD_VIDEO_AV1_SELECT_INTEGER_MV   2
 
@@ -76,6 +78,19 @@ typedef enum StdVideoAV1FrameType {
     STD_VIDEO_AV1_FRAME_TYPE_MAX_ENUM = 0x7FFFFFFF
 } StdVideoAV1FrameType;
 
+typedef enum StdVideoAV1ReferenceName {
+    STD_VIDEO_AV1_REFERENCE_NAME_INTRA_FRAME = 0,
+    STD_VIDEO_AV1_REFERENCE_NAME_LAST_FRAME = 1,
+    STD_VIDEO_AV1_REFERENCE_NAME_LAST2_FRAME = 2,
+    STD_VIDEO_AV1_REFERENCE_NAME_LAST3_FRAME = 3,
+    STD_VIDEO_AV1_REFERENCE_NAME_GOLDEN_FRAME = 4,
+    STD_VIDEO_AV1_REFERENCE_NAME_BWDREF_FRAME = 5,
+    STD_VIDEO_AV1_REFERENCE_NAME_ALTREF2_FRAME = 6,
+    STD_VIDEO_AV1_REFERENCE_NAME_ALTREF_FRAME = 7,
+    STD_VIDEO_AV1_REFERENCE_NAME_INVALID = 0x7FFFFFFF,
+    STD_VIDEO_AV1_REFERENCE_NAME_MAX_ENUM = 0x7FFFFFFF
+} StdVideoAV1ReferenceName;
+
 typedef enum StdVideoAV1InterpolationFilter {
     STD_VIDEO_AV1_INTERPOLATION_FILTER_EIGHTTAP = 0,
     STD_VIDEO_AV1_INTERPOLATION_FILTER_EIGHTTAP_SMOOTH = 1,
@@ -93,33 +108,6 @@ typedef enum StdVideoAV1TxMode {
     STD_VIDEO_AV1_TX_MODE_INVALID = 0x7FFFFFFF,
     STD_VIDEO_AV1_TX_MODE_MAX_ENUM = 0x7FFFFFFF
 } StdVideoAV1TxMode;
-typedef struct StdVideoAV1SequenceHeaderFlags {
-    uint32_t    still_picture : 1;
-    uint32_t    reduced_still_picture_header : 1;
-    uint32_t    use_128x128_superblock : 1;
-    uint32_t    enable_filter_intra : 1;
-    uint32_t    enable_intra_edge_filter : 1;
-    uint32_t    enable_interintra_compound : 1;
-    uint32_t    enable_masked_compound : 1;
-    uint32_t    enable_warped_motion : 1;
-    uint32_t    enable_dual_filter : 1;
-    uint32_t    enable_order_hint : 1;
-    uint32_t    enable_jnt_comp : 1;
-    uint32_t    enable_ref_frame_mvs : 1;
-    uint32_t    frame_id_numbers_present_flag : 1;
-    uint32_t    enable_superres : 1;
-    uint32_t    enable_cdef : 1;
-    uint32_t    enable_restoration : 1;
-    uint32_t    film_grain_params_present : 1;
-    uint32_t    timing_info_present_flag : 1;
-    uint32_t    initial_display_delay_present_flag : 1;
-    uint32_t    seq_choose_screen_content_tools : 1;
-    uint32_t    seq_force_screen_content_tools : 1;
-    uint32_t    seq_choose_integer_mv : 1;
-    uint32_t    seq_force_integer_mv : 1;
-    uint32_t    reserved : 9;
-} StdVideoAV1SequenceHeaderFlags;
-
 typedef struct StdVideoAV1ColorConfigFlags {
     uint32_t    mono_chrome : 1;
     uint32_t    color_range : 1;
@@ -146,55 +134,6 @@ typedef struct StdVideoAV1TimingInfo {
     uint32_t                      time_scale;
     uint32_t                      num_ticks_per_picture_minus_1;
 } StdVideoAV1TimingInfo;
-
-typedef struct StdVideoAV1SequenceHeader {
-    StdVideoAV1SequenceHeaderFlags    flags;
-    StdVideoAV1Profile                seq_profile;
-    uint8_t                           frame_width_bits_minus_1;
-    uint8_t                           frame_height_bits_minus_1;
-    uint16_t                          max_frame_width_minus_1;
-    uint16_t                          max_frame_height_minus_1;
-    uint8_t                           delta_frame_id_length_minus_2;
-    uint8_t                           additional_frame_id_length_minus_1;
-    uint8_t                           order_hint_bits_minus_1;
-    uint8_t                           seq_force_integer_mv;
-    uint8_t                           reserved1[6];
-    StdVideoAV1ColorConfig            color_config;
-    StdVideoAV1TimingInfo             timing_info;
-} StdVideoAV1SequenceHeader;
-
-typedef struct StdVideoAV1FrameHeaderFlags {
-    uint32_t    error_resilient_mode : 1;
-    uint32_t    disable_cdf_update : 1;
-    uint32_t    use_superres : 1;
-    uint32_t    render_and_frame_size_different : 1;
-    uint32_t    allow_screen_content_tools : 1;
-    uint32_t    is_filter_switchable : 1;
-    uint32_t    force_integer_mv : 1;
-    uint32_t    frame_size_override_flag : 1;
-    uint32_t    buffer_removal_time_present_flag : 1;
-    uint32_t    allow_intrabc : 1;
-    uint32_t    frame_refs_short_signaling : 1;
-    uint32_t    allow_high_precision_mv : 1;
-    uint32_t    is_motion_mode_switchable : 1;
-    uint32_t    use_ref_frame_mvs : 1;
-    uint32_t    disable_frame_end_update_cdf : 1;
-    uint32_t    allow_warped_motion : 1;
-    uint32_t    reduced_tx_set : 1;
-    uint32_t    reference_select : 1;
-    uint32_t    skip_mode_present : 1;
-    uint32_t    delta_q_present : 1;
-    uint32_t    delta_lf_present : 1;
-    uint32_t    delta_lf_multi : 1;
-    uint32_t    segmentation_enabled : 1;
-    uint32_t    segmentation_update_map : 1;
-    uint32_t    segmentation_temporal_update : 1;
-    uint32_t    segmentation_update_data : 1;
-    uint32_t    UsesLr : 1;
-    uint32_t    usesChromaLr : 1;
-    uint32_t    apply_grain : 1;
-    uint32_t    reserved : 3;
-} StdVideoAV1FrameHeaderFlags;
 
 typedef struct StdVideoAV1LoopFilterFlags {
     uint32_t    loop_filter_delta_enabled : 1;
@@ -307,6 +246,82 @@ typedef struct StdVideoAV1FilmGrain {
     uint8_t                      cr_luma_mult;
     uint16_t                     cr_offset;
 } StdVideoAV1FilmGrain;
+
+typedef struct StdVideoAV1SequenceHeaderFlags {
+    uint32_t    still_picture : 1;
+    uint32_t    reduced_still_picture_header : 1;
+    uint32_t    use_128x128_superblock : 1;
+    uint32_t    enable_filter_intra : 1;
+    uint32_t    enable_intra_edge_filter : 1;
+    uint32_t    enable_interintra_compound : 1;
+    uint32_t    enable_masked_compound : 1;
+    uint32_t    enable_warped_motion : 1;
+    uint32_t    enable_dual_filter : 1;
+    uint32_t    enable_order_hint : 1;
+    uint32_t    enable_jnt_comp : 1;
+    uint32_t    enable_ref_frame_mvs : 1;
+    uint32_t    frame_id_numbers_present_flag : 1;
+    uint32_t    enable_superres : 1;
+    uint32_t    enable_cdef : 1;
+    uint32_t    enable_restoration : 1;
+    uint32_t    film_grain_params_present : 1;
+    uint32_t    timing_info_present_flag : 1;
+    uint32_t    initial_display_delay_present_flag : 1;
+    uint32_t    seq_choose_screen_content_tools : 1;
+    uint32_t    seq_force_screen_content_tools : 1;
+    uint32_t    seq_choose_integer_mv : 1;
+    uint32_t    seq_force_integer_mv : 1;
+    uint32_t    reserved : 9;
+} StdVideoAV1SequenceHeaderFlags;
+
+typedef struct StdVideoAV1SequenceHeader {
+    StdVideoAV1SequenceHeaderFlags    flags;
+    StdVideoAV1Profile                seq_profile;
+    uint8_t                           frame_width_bits_minus_1;
+    uint8_t                           frame_height_bits_minus_1;
+    uint16_t                          max_frame_width_minus_1;
+    uint16_t                          max_frame_height_minus_1;
+    uint8_t                           delta_frame_id_length_minus_2;
+    uint8_t                           additional_frame_id_length_minus_1;
+    uint8_t                           order_hint_bits_minus_1;
+    uint8_t                           seq_force_integer_mv;
+    uint8_t                           reserved1[6];
+    StdVideoAV1ColorConfig            color_config;
+    StdVideoAV1TimingInfo             timing_info;
+} StdVideoAV1SequenceHeader;
+
+typedef struct StdVideoAV1FrameHeaderFlags {
+    uint32_t    error_resilient_mode : 1;
+    uint32_t    disable_cdf_update : 1;
+    uint32_t    use_superres : 1;
+    uint32_t    render_and_frame_size_different : 1;
+    uint32_t    allow_screen_content_tools : 1;
+    uint32_t    is_filter_switchable : 1;
+    uint32_t    force_integer_mv : 1;
+    uint32_t    frame_size_override_flag : 1;
+    uint32_t    buffer_removal_time_present_flag : 1;
+    uint32_t    allow_intrabc : 1;
+    uint32_t    frame_refs_short_signaling : 1;
+    uint32_t    allow_high_precision_mv : 1;
+    uint32_t    is_motion_mode_switchable : 1;
+    uint32_t    use_ref_frame_mvs : 1;
+    uint32_t    disable_frame_end_update_cdf : 1;
+    uint32_t    allow_warped_motion : 1;
+    uint32_t    reduced_tx_set : 1;
+    uint32_t    reference_select : 1;
+    uint32_t    skip_mode_present : 1;
+    uint32_t    delta_q_present : 1;
+    uint32_t    delta_lf_present : 1;
+    uint32_t    delta_lf_multi : 1;
+    uint32_t    segmentation_enabled : 1;
+    uint32_t    segmentation_update_map : 1;
+    uint32_t    segmentation_temporal_update : 1;
+    uint32_t    segmentation_update_data : 1;
+    uint32_t    UsesLr : 1;
+    uint32_t    usesChromaLr : 1;
+    uint32_t    apply_grain : 1;
+    uint32_t    reserved : 3;
+} StdVideoAV1FrameHeaderFlags;
 
 typedef struct StdVideoAV1FrameHeader {
     StdVideoAV1FrameHeaderFlags       flags;

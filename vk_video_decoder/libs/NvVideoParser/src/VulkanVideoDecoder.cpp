@@ -68,10 +68,11 @@ VulkanVideoDecoder::~VulkanVideoDecoder()
 
 VkResult VulkanVideoDecoder::Initialize(const VkParserInitDecodeParameters *pParserPictureData)
 {
-
+#ifndef HEADLESS_AV1
     if (pParserPictureData->interfaceVersion != NV_VULKAN_VIDEO_PARSER_API_VERSION) {
         return VK_ERROR_INCOMPATIBLE_DRIVER;
     }
+#endif
 
     Deinitialize();
     m_pClient = pParserPictureData->pClient;

@@ -19,11 +19,13 @@ extern "C" {
 
 
 
+// vulkan_video_codec_av1std_decode is a preprocessor guard. Do not pass it to API calls.
 #define vulkan_video_codec_av1std_decode 1
+#include "vulkan_video_codec_av1std.h"
 
-#define VK_STD_VULKAN_VIDEO_CODEC_AV1_DECODE_API_VERSION_0_9_1 VK_MAKE_VIDEO_STD_VERSION(0, 9, 1)
+#define VK_STD_VULKAN_VIDEO_CODEC_AV1_DECODE_API_VERSION_0_9_2 VK_MAKE_VIDEO_STD_VERSION(0, 9, 2)
 
-#define VK_STD_VULKAN_VIDEO_CODEC_AV1_DECODE_SPEC_VERSION VK_STD_VULKAN_VIDEO_CODEC_AV1_DECODE_API_VERSION_0_9_1
+#define VK_STD_VULKAN_VIDEO_CODEC_AV1_DECODE_SPEC_VERSION VK_STD_VULKAN_VIDEO_CODEC_AV1_DECODE_API_VERSION_0_9_2
 #define VK_STD_VULKAN_VIDEO_CODEC_AV1_DECODE_EXTENSION_NAME "VK_STD_vulkan_video_codec_av1_decode"
 typedef struct StdVideoDecodeAV1PictureInfo {
     const StdVideoAV1FrameHeader*    pFrameHeader;
@@ -31,10 +33,20 @@ typedef struct StdVideoDecodeAV1PictureInfo {
     uint16_t                         tg_end;
 } StdVideoDecodeAV1PictureInfo;
 
+typedef struct StdVideoDecodeAV1ReferenceInfoFlags {
+    uint32_t    disable_frame_end_update_cdf : 1;
+    uint32_t    segmentation_enabled : 1;
+    uint32_t    reserved : 30;
+} StdVideoDecodeAV1ReferenceInfoFlags;
+
 typedef struct StdVideoDecodeAV1ReferenceInfo {
-    uint8_t    frame_type;
-    uint8_t    GmType;
-    int32_t    gm_params[6];
+    StdVideoDecodeAV1ReferenceInfoFlags    flags;
+    uint8_t                                frame_type;
+    uint8_t                                base_q_idx;
+    uint8_t                                GmType;
+    uint8_t                                reserved1;
+    int32_t                                gm_params[6];
+    int8_t                                 RefFrameSignedBiasValues[8]; // This is what will be proposed. It is the calculated signed distance between a ref_order_hint array of a frame and the frame_offset aka order_hint.
 } StdVideoDecodeAV1ReferenceInfo;
 
 
