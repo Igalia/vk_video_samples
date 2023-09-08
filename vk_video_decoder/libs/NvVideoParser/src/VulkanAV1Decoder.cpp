@@ -21,8 +21,8 @@
 /////////////////////////////////////////////////////////////////////////////////////////////////////
 
 #include <algorithm>
-
-#include <stdint.h>
+#include <cstdint>
+#include <climits>
 #include "VulkanVideoParserIf.h"
 
 #ifdef ENABLE_AV1_DECODER
@@ -376,7 +376,7 @@ bool VulkanAV1Decoder::BeginPicture(VkParserPictureData* pnvpd)
         av1->refFrameParams[i].segmentation_enabled = m_pBuffers[i].segmentation_enabled;
         av1->refFrameParams[i].frame_type = m_pBuffers[i].frame_type;
         av1->refFrameParams[i].order_hint = m_pBuffers[i].order_hint;
-        for (int av1name = 0; av1name < (sizeof(av1->refFrameParams[i].ref_order_hint)); av1name += 1 ) {
+        for (size_t av1name = 0; av1name < (sizeof(av1->refFrameParams[i].ref_order_hint)); av1name += 1 ) {
             av1->refFrameParams[i].ref_order_hint[av1name] = m_pBuffers[i].ref_order_hint[av1name];
             av1->refFrameParams[i].RefFrameSignBias[av1name] = m_pBuffers[i].RefFrameSignBias[av1name];
         }

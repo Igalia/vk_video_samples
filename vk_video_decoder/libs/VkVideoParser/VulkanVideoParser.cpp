@@ -549,6 +549,7 @@ public:
             pReferenceSlots[dpbEntryIdx].pNext = pDpbSlotInfo[dpbEntryIdx].Init(dpbSlotIndex);
 
             StdVideoDecodeAV1ReferenceInfo* pRefPicInfo = &pDpbSlotInfo[dpbEntryIdx].stdReferenceInfo;
+            (void)pRefPicInfo;
 #if 0
             // Logical array - maintained by the parser.
             // Vulkan Video parser.cpp -- maintains its own indices.
@@ -1729,7 +1730,7 @@ uint32_t VulkanVideoParser::FillDpbAV1State(
             stdReferenceInfo.flags.disable_frame_end_update_cdf = frameParameters.disable_frame_end_update_cdf;
             stdReferenceInfo.flags.segmentation_enabled = frameParameters.segmentation_enabled;
 
-            for (int av1name = 0; av1name < sizeof(stdReferenceInfo.RefFrameSignedBiasValues); av1name += 1) {
+            for (size_t av1name = 0; av1name < sizeof(stdReferenceInfo.RefFrameSignedBiasValues); av1name += 1) {
                 stdReferenceInfo.RefFrameSignedBiasValues[av1name] = frameParameters.RefFrameSignBias[av1name];
             }
 
@@ -2248,7 +2249,7 @@ bool VulkanVideoParser::DecodePicture(
 
         // Setup the AV1 frame header
         StdVideoAV1FrameHeader& hdr = av1.frameHeader;
-        for (int i = 0; i < ARRAYSIZE(pin->active_ref_names); i++)
+        for (size_t i = 0; i < ARRAYSIZE(pin->active_ref_names); i++)
         {
             hdr.ref_frame_idx[i] = pin->ref_frame_idx[i];
             hdr.ref_order_hint[i] = pin->ref_order_hint[pin->ref_frame_idx[i]];
