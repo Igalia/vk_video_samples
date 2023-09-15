@@ -39,8 +39,7 @@ VulkanAV1Decoder::VulkanAV1Decoder(VkVideoCodecOperationFlagBitsKHR std)
     m_pCurrPic = nullptr;
     m_pFGSPic = nullptr;
     for (int i = 0; i < 8; i++) {
-        m_pBuffers[i].buffer = nullptr;
-        m_pBuffers[i].fgs_buffer = nullptr;
+        memset(&m_pBuffers[i], 0, sizeof(m_pBuffers[0]));
     }
     for (int i = 0; i < NUM_REF_FRAMES; i++) {
         ref_frame_id[i] = -1;
