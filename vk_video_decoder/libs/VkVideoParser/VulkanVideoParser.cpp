@@ -2237,11 +2237,11 @@ bool VulkanVideoParser::DecodePicture(
             std::cout << i << " ";
             }
             std::cout << std::endl;
-            for (int i = 0; i < 7; i++) {
-            std::cout << (int32_t)pin->active_ref_names[i] << " ";
+            for (int i = 0; i < STD_VIDEO_AV1_REFS_PER_FRAME; i++) {
+            std::cout << (int32_t)pin->ref_frame_idx[i] << " ";
             }
             std::cout << "\nref_frame_map:" << std::endl;
-            for (int i = 0; i < 8; i++) {
+            for (int i = 0; i < STD_VIDEO_AV1_NUM_REF_FRAMES; i++) {
             std::cout << i << ": " << pin->ref_frame_picture[i] << std::endl;
             }
             std::cout << std::endl;
@@ -2249,12 +2249,12 @@ bool VulkanVideoParser::DecodePicture(
 
         // Setup the AV1 frame header
         StdVideoAV1FrameHeader& hdr = av1.frameHeader;
-        for (size_t i = 0; i < ARRAYSIZE(pin->active_ref_names); i++)
+        for (size_t i = 0; i < ARRAYSIZE(pin->ref_frame_idx); i++)
         {
             hdr.ref_frame_idx[i] = pin->ref_frame_idx[i];
             hdr.ref_order_hint[i] = pin->ref_order_hint[pin->ref_frame_idx[i]];
 
-            int8_t picIdx = GetPicIdx(pin->ref_frame_picture[pin->active_ref_names[i]]);
+            int8_t picIdx = GetPicIdx(pin->ref_frame_picture[pin->ref_frame_idx[i]]);
             if (picIdx < 0) {
                 pPictureInfo->referenceNameSlotIndex[i] = -1;
                 continue;

@@ -620,9 +620,8 @@ typedef struct VkParserAv1PictureData {
     // order: Last frame,Last2 frame,Last3 frame,Golden frame,BWDREF frame,ALTREF2
     // frame,ALTREF frame
     uint8_t primary_ref_frame;
-    uint8_t active_ref_names[7]; // Rename to active_ref_names
-    uint8_t ref_frame_idx[8];
-    VkPicIf* ref_frame_picture[8];
+    uint8_t ref_frame_idx[7];
+    VkPicIf* ref_frame_picture[8]; // The "VBI" in the AV1 spec, with the indices mapped to picture resources.
     uint8_t ref_order_hint[8];
 
     //av1_ref_frames_s* refFrameParams;
