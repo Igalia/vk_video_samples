@@ -203,6 +203,9 @@ int32_t VkVideoDecoder::StartVideoSequence(VkParserDetectedVideoFormat* pVideoFo
     uint32_t alignHeight = videoCapabilities.pictureAccessGranularity.height - 1;
     imageExtent.height = ((imageExtent.height + alignHeight) & ~alignHeight);
 
+    // TODO: questions about slot mgmt.
+    // maxDpbSlotCount = std::min(videoCapabilities.maxDpbSlots, maxDpbSlotCount);)
+
     if (!m_videoSession ||
             !m_videoSession->IsCompatible( m_vkDevCtx,
                                            m_vkDevCtx->GetVideoDecodeQueueFamilyIdx(),

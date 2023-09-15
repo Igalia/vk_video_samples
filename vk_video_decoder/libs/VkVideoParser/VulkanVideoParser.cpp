@@ -1104,7 +1104,7 @@ int32_t VulkanVideoParser::BeginSequence(const VkParserSequenceInfo* pnvsi)
         MAX_DPB_REF_AND_SETUP_SLOTS : MAX_DPB_REF_SLOTS;
 
     if (pnvsi->eCodec == VK_VIDEO_CODEC_OPERATION_DECODE_AV1_BIT_KHR) {
-        maxDpbSlots = 8;
+        maxDpbSlots = 9;
     }
 
     uint32_t configDpbSlots = (pnvsi->nMinNumDpbSlots > 0) ? pnvsi->nMinNumDpbSlots : maxDpbSlots;
@@ -1691,7 +1691,7 @@ uint32_t VulkanVideoParser::FillDpbAV1State(
     // #### Update m_dpb based on dpb parameters ####
     // Create unordered DPB and generate a bitmask of all render targets present
     // in DPB
-    assert(m_maxNumDpbSlots <= AV1_MAX_DPB_SLOTS);
+    assert(m_maxNumDpbSlots <= AV1_MAX_DPB_SLOTS + 1);
     uint32_t refDpbUsedAndValidMask = 0;
     uint32_t referenceIndex = 0;
 
