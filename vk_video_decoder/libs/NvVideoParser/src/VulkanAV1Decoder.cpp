@@ -384,6 +384,8 @@ bool VulkanAV1Decoder::BeginPicture(VkParserPictureData* pnvpd)
 
     // if not 0 -- may not alloc a slot. Re-resolve this per frame per dpb index.
     // What to do with index [7] ?
+    // NOTE(charlie): This is the thing I was talking about, and calling a "scratch space" in the Khr issues
+    // Some bitstreams store something here for future reference I understand. Checkout 48delayed.ivf for one example.
     av1->ref_frame_picture[7] = m_pBuffers[7].buffer;
 
     return true;
