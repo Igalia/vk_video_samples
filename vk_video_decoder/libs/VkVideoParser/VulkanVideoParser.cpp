@@ -2452,8 +2452,8 @@ bool VulkanVideoParser::DecodePicture(
         }
         av1.stdPictureInfo.pFrameHeader = &av1.frameHeader;
 
-        // 
-        // TODO: skip_mode_frame_idx
+        hdr.SkipModeFrame[0] = pin->SkipModeFrame0;
+        hdr.SkipModeFrame[1] = pin->SkipModeFrame1;
 //#endif
     }
 
