@@ -1790,7 +1790,9 @@ uint32_t VulkanVideoParser::FillDpbAV1State(
         refDpbUsedAndValidMask |= (1 << currPicIdx);
     }
 
-
+    // NOTE(charlie): Most likely we can consider isReference = refresh_frame_flags != 0;
+    // However, the AMD fw interface appears to always need a setup slot & a destination resource,
+    // so it's not clear what to properly do in that case.
     int8_t dpbSlot = AllocateDpbSlotForCurrentAV1(GetPic(pd->pCurrPic),
         true /* isReference */, pd->current_dpb_id);
     *pCurrAllocatedSlotIndex = dpbSlot;
