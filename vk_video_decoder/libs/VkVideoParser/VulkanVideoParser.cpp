@@ -726,7 +726,7 @@ public:
 };
 
 bool VulkanVideoParser::m_dumpParserData = false;
-bool VulkanVideoParser::m_dumpDpbData = false;
+bool VulkanVideoParser::m_dumpDpbData = true;
 
 bool VulkanVideoParser::DecodePicture(VkParserPictureData* pd)
 {
@@ -1090,6 +1090,9 @@ uint32_t VulkanVideoParser::ResetPicDpbSlots(uint32_t picIndexSlotValidMask)
              ((picIdx < m_maxNumDecodeSurfaces) && resetSlotsMask); picIdx++) {
             if (resetSlotsMask & (1 << picIdx)) {
                 resetSlotsMask &= ~(1 << picIdx);
+		if (m_dumpDpbData) {
+		    printf(";;; Resetting picIdx %d, was using dpb slot %d\n", picIdx, m_pictureToDpbSlotMap[picIdx]);
+		}
                 SetPicDpbSlot(picIdx, -1);
             }
         }
@@ -1696,11 +1699,43 @@ uint32_t VulkanVideoParser::FillDpbAV1State(
 
     if (m_dumpParserData)
         std::cout << "Ref frames data: " << std::endl;
+
+    if (m_dumpDpbData) {
+	printf(";;;; ======= AV1 DPB fill begin %d =======\n", m_nCurrentPictureID);
+	printf("ref_frame_idx: ");
+	for (int i = 0 ; i < 7; i++)
+	    printf("%02d ", i);
+	printf("\nref_frame_idx: ");
+	for (int i = 0 ; i < 7; i++)
+	    printf("%02d ", pin->ref_frame_idx[i]);
+	printf("\n");
+
+	printf("m_pictureToDpbSlotMap: ");
+	for (int i = 0; i < MAX_FRM_CNT; i++) {
+	    printf("%02d ", i);
+	}
+	printf("\nm_pictureToDpbSlotMap: ");
+	for (int i = 0; i < MAX_FRM_CNT; i++) {
+	    printf("%02d ", m_pictureToDpbSlotMap[i]);
+	}
+	printf("\n");
+
+	printf("ref_frame_picture: ");
+	for (int32_t inIdx = 0; inIdx < STD_VIDEO_AV1_NUM_REF_FRAMES; inIdx++) {
+	    printf("%02d ", inIdx);
+	}
+	printf("\nref_frame_picture: ");
+	for (int32_t inIdx = 0; inIdx < STD_VIDEO_AV1_NUM_REF_FRAMES; inIdx++) {
+	    int8_t picIdx = GetPicIdx(pin->ref_frame_picture[inIdx]);
+	    printf("%02d ", picIdx);
+	}
+	printf("\n");
+    }
+
     for (int32_t inIdx = 0; inIdx < STD_VIDEO_AV1_NUM_REF_FRAMES; inIdx++) {
         int8_t picIdx = GetPicIdx(pin->ref_frame_picture[inIdx]);
         int8_t dpbSlot = -1;
         if ((picIdx >= 0) && !(refDpbUsedAndValidMask & (1 << picIdx))) { // Causes an assert in the driver that the DPB is invalid, with a slotindex of -1.
-            assert(referenceIndex < AV1_MAX_DPB_SLOTS);
             refDpbUsedAndValidMask |= (1 << picIdx);
 
             dpbSlot = GetPicDpbSlot(picIdx);
@@ -1738,8 +1773,13 @@ uint32_t VulkanVideoParser::FillDpbAV1State(
         }
     }
 
-    if (m_dumpParserData)
-        std::cout << "Total Ref frames: " << referenceIndex << std::endl;
+    if (m_dumpDpbData) {
+	printf(";;; pReferenceSlots (%d): ", referenceIndex);
+	for (size_t i =0 ;i < referenceIndex; i++) {
+	    printf("%02d ", pReferenceSlots[i].slotIndex);
+	}
+	printf("\n");
+    }
 
     ResetPicDpbSlots(refDpbUsedAndValidMask);
 
@@ -1757,6 +1797,22 @@ uint32_t VulkanVideoParser::FillDpbAV1State(
     assert(!(dpbSlot < 0));
     if (dpbSlot >= 0) {
         assert(pd->ref_pic_flag);
+    }
+
+    if (m_dumpDpbData) {
+	printf("SlotsInUse: ");
+	uint32_t slotsInUse = m_dpb.getSlotInUseMask();
+	for (int i = 0; i < 9; i++) {
+	    printf("%02d ", i);
+	}
+	uint8_t greenSquare[] = { 0xf0, 0x9f,  0x9f, 0xa9, 0x00 };
+	uint8_t redSquare[] = { 0xf0, 0x9f,  0x9f, 0xa5, 0x00 };
+	uint8_t yellowSquare[] = { 0xf0, 0x9f,  0x9f, 0xa8, 0x00 };
+	printf("\nSlotsInUse: ");
+	for (int i = 0; i < 9; i++) {
+	    printf("%-2s ", (slotsInUse & (1<<i)) ? (i == dpbSlot ? (char*)yellowSquare : (char*)greenSquare) : (char*)redSquare); 
+	}
+	printf("\n");
     }
 
     return referenceIndex;
@@ -2222,28 +2278,9 @@ bool VulkanVideoParser::DecodePicture(
         pPictureInfo->sType = VK_STRUCTURE_TYPE_VIDEO_DECODE_AV1_PICTURE_INFO_KHR;
         pCurrFrameDecParams->decodeFrameInfo.pNext = &av1.pictureInfo;
 
-        if (false)
-        {
-            std::cout << "PicIdx = " << PicIdx << std::endl;
-            std::cout << "primary_ref_frame = " << (int32_t)pin->primary_ref_frame << std::endl;
-            std::cout << "ref_frame[7]=" << std::endl;
-            for (int i = 0; i < 7; i++) {
-            std::cout << i << " ";
-            }
-            std::cout << std::endl;
-            for (int i = 0; i < STD_VIDEO_AV1_REFS_PER_FRAME; i++) {
-            std::cout << (int32_t)pin->ref_frame_idx[i] << " ";
-            }
-            std::cout << "\nref_frame_map:" << std::endl;
-            for (int i = 0; i < STD_VIDEO_AV1_NUM_REF_FRAMES; i++) {
-            std::cout << i << ": " << pin->ref_frame_picture[i] << std::endl;
-            }
-            std::cout << std::endl;
-        }
-
         // Setup the AV1 frame header
         StdVideoAV1FrameHeader& hdr = av1.frameHeader;
-        for (size_t i = 0; i < ARRAYSIZE(pin->ref_frame_idx); i++)
+        for (size_t i = 0; i < STD_VIDEO_AV1_REFS_PER_FRAME; i++)
         {
             hdr.ref_frame_idx[i] = pin->ref_frame_idx[i];
             hdr.ref_order_hint[i] = pin->ref_order_hint[pin->ref_frame_idx[i]];
@@ -2260,6 +2297,17 @@ bool VulkanVideoParser::DecodePicture(
             pPictureInfo->referenceNameSlotIndex[i] = dpbSlot;
             //hdr.delta_frame_id_minus_1[dpbSlot] = pin->delta_frame_id_minus_1[pin->ref_frame_idx[i]];
         }
+
+        printf("%d referenceNameSlotIndex: ", m_nCurrentPictureID);
+        for (int i = 0; i < STD_VIDEO_AV1_REFS_PER_FRAME; i++) {
+            printf("%02d ", i);
+        }
+        printf("\n%d referenceNameSlotIndex: ", m_nCurrentPictureID);
+        for (int i = 0; i < STD_VIDEO_AV1_REFS_PER_FRAME; i++) {
+            printf("%02d ", pPictureInfo->referenceNameSlotIndex[i]);
+        }
+        printf("\n");
+
         StdVideoAV1FrameHeaderFlags* flags = &hdr.flags;
         flags->disable_frame_end_update_cdf = pin->disable_frame_end_update_cdf;
         flags->error_resilient_mode = pin->error_resilient_mode;
