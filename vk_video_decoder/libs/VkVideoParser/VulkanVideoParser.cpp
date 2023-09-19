@@ -23,7 +23,8 @@
 #include <algorithm>
 #include <atomic>
 #include <iostream>
-#include <queue> // std::queue
+#include <vector>
+#include <deque>
 
 #include "VulkanVideoParserIf.h"
 #include "NvVideoParser/nvVulkanVideoParser.h"
@@ -272,7 +273,7 @@ public:
         }
 
         for (uint8_t dpbIndx = oldDpbMaxSize; dpbIndx < m_dpbMaxSize; dpbIndx++) {
-            m_dpbSlotsAvailable.push(dpbIndx);
+            m_dpbSlotsAvailable.push_back(dpbIndx);
         }
 
         return m_dpbMaxSize;
@@ -285,7 +286,7 @@ public:
         }
 
         while (!m_dpbSlotsAvailable.empty()) {
-            m_dpbSlotsAvailable.pop();
+            m_dpbSlotsAvailable.pop_back();
         }
 
         m_dpbMaxSize = 0;
@@ -297,13 +298,13 @@ public:
     int8_t AllocateSlot()
     {
         if (m_dpbSlotsAvailable.empty()) {
-            assert(!"No more h.264/5 DPB slots are available");
+            assert(!"No more DPB slots are available");
             return -1;
         }
         int8_t slot = (int8_t)m_dpbSlotsAvailable.front();
         assert((slot >= 0) && ((uint8_t)slot < m_dpbMaxSize));
         m_slotInUseMask |= (1 << slot);
-        m_dpbSlotsAvailable.pop();
+        m_dpbSlotsAvailable.pop_front();
         m_dpb[slot].Reserve();
         return slot;
     }
@@ -315,7 +316,7 @@ public:
         assert(m_slotInUseMask & (1 << slot));
 
         m_dpb[slot].Invalidate();
-        m_dpbSlotsAvailable.push(slot);
+        m_dpbSlotsAvailable.push_front(slot);
         m_slotInUseMask &= ~(1 << slot);
     }
 
@@ -358,7 +359,7 @@ private:
     uint32_t m_dpbMaxSize;
     uint32_t m_slotInUseMask;
     std::vector<DpbSlot> m_dpb;
-    std::queue<uint8_t> m_dpbSlotsAvailable;
+    std::deque<uint8_t> m_dpbSlotsAvailable;
 };
 
 class VulkanVideoParser : public VkParserVideoDecodeClient,
