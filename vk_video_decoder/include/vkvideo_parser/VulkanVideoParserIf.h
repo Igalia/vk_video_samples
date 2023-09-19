@@ -364,9 +364,6 @@ typedef struct VkParserAv1GlobalMotionParameters {
     int8_t reserved[3];
 } VkParserAv1GlobalMotionParameters;
 
-#define AV1_MAX_DPB_SLOTS 8
-#define NUM_REF_FRAMES              8
-
 typedef struct ExtraAV1Parameters {
     uint32_t                primary_ref_frame; // if not 0 -- may not alloc a slot. Re-resolve this per frame per dpb index.
     uint32_t                base_q_index;

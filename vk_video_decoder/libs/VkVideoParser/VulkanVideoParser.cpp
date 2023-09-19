@@ -540,8 +540,8 @@ public:
             VkVideoReferenceSlotInfoKHR* pReferenceSlots,
             uint32_t dpbEntryIdx, uint32_t dpbSlotIndex)
         {
-            assert(dpbEntryIdx < AV1_MAX_DPB_SLOTS);
-            assert(dpbSlotIndex < AV1_MAX_DPB_SLOTS);
+            assert(dpbEntryIdx < STD_VIDEO_AV1_NUM_REF_FRAMES);
+            assert(dpbSlotIndex < STD_VIDEO_AV1_NUM_REF_FRAMES);
             assert(isRef());
 
             assert((dpbSlotIndex == (uint32_t)dpbSlot) || is_non_existing);
@@ -1689,17 +1689,14 @@ uint32_t VulkanVideoParser::FillDpbAV1State(
     int8_t* pGopReferenceImagesIndexes,
     int32_t* pCurrAllocatedSlotIndex)
 {
-    // #### Update m_dpb based on dpb parameters ####
-    // Create unordered DPB and generate a bitmask of all render targets present
-    // in DPB
-    assert(m_maxNumDpbSlots <= AV1_MAX_DPB_SLOTS + 1);
+    // TODO(charlie): This shouldn't really need to be + 1 (9), TBD.
+    assert(m_maxNumDpbSlots <= STD_VIDEO_AV1_NUM_REF_FRAMES + 1);
     uint32_t refDpbUsedAndValidMask = 0;
     uint32_t referenceIndex = 0;
 
     if (m_dumpParserData)
         std::cout << "Ref frames data: " << std::endl;
- 
-    for (int32_t inIdx = 0; inIdx < AV1_MAX_DPB_SLOTS; inIdx++) {
+    for (int32_t inIdx = 0; inIdx < STD_VIDEO_AV1_NUM_REF_FRAMES; inIdx++) {
         int8_t picIdx = GetPicIdx(pin->ref_frame_picture[inIdx]);
         int8_t dpbSlot = -1;
         if ((picIdx >= 0) && !(refDpbUsedAndValidMask & (1 << picIdx))) { // Causes an assert in the driver that the DPB is invalid, with a slotindex of -1.
@@ -1744,8 +1741,7 @@ uint32_t VulkanVideoParser::FillDpbAV1State(
     if (m_dumpParserData)
         std::cout << "Total Ref frames: " << referenceIndex << std::endl;
 
-    assert(referenceIndex <= m_maxNumDpbSlots);
-    assert(referenceIndex <= AV1_MAX_DPB_SLOTS);
+    ResetPicDpbSlots(refDpbUsedAndValidMask);
 
     // Take into account the reference picture now.
     int8_t currPicIdx = GetPicIdx(pd->pCurrPic);
@@ -1754,9 +1750,6 @@ uint32_t VulkanVideoParser::FillDpbAV1State(
         refDpbUsedAndValidMask |= (1 << currPicIdx);
     }
 
-    // Map all frames not present in DPB as non-reference, and generate a mask of
-    // all used DPB entries
-    /* uint32_t destUsedDpbMask = */ ResetPicDpbSlots(refDpbUsedAndValidMask);
 
     int8_t dpbSlot = AllocateDpbSlotForCurrentAV1(GetPic(pd->pCurrPic),
         true /* isReference */, pd->current_dpb_id);
