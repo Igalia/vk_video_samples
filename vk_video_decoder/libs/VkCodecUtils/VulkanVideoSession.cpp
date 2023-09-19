@@ -23,6 +23,8 @@
 #include "VkVideoCore/VkVideoCoreProfile.h"
 #include "VkCodecUtils/VulkanVideoSession.h"
 
+static constexpr bool DEBUGGING = true;
+
 VkResult VulkanVideoSession::Create(const VulkanDeviceContext* vkDevCtx,
                                     uint32_t            videoQueueFamily,
                                     VkVideoCoreProfile* pVideoProfile,
@@ -102,6 +104,8 @@ VkResult VulkanVideoSession::Create(const VulkanDeviceContext* vkDevCtx,
     uint32_t decodeSessionBindMemoryCount = videoSessionMemoryRequirementsCount;
     VkBindVideoSessionMemoryInfoKHR decodeSessionBindMemory[MAX_BOUND_MEMORY];
 
+    uint64_t totalMemorySize = 0;
+
     for (uint32_t memIdx = 0; memIdx < decodeSessionBindMemoryCount; memIdx++) {
 
         uint32_t memoryTypeIndex = 0;
@@ -136,6 +140,7 @@ VkResult VulkanVideoSession::Create(const VulkanDeviceContext* vkDevCtx,
         decodeSessionBindMemory[memIdx].memoryBindIndex = decodeSessionMemoryRequirements[memIdx].memoryBindIndex;
         decodeSessionBindMemory[memIdx].memoryOffset = 0;
         decodeSessionBindMemory[memIdx].memorySize = decodeSessionMemoryRequirements[memIdx].memoryRequirements.size;
+	totalMemorySize += decodeSessionMemoryRequirements[memIdx].memoryRequirements.size;
     }
 
     result = vkDevCtx->BindVideoSessionMemoryKHR(*vkDevCtx, pNewVideoSession->m_videoSession, decodeSessionBindMemoryCount,
@@ -143,6 +148,10 @@ VkResult VulkanVideoSession::Create(const VulkanDeviceContext* vkDevCtx,
     assert(result == VK_SUCCESS);
 
     videoSession = pNewVideoSession;
+    if (DEBUGGING) {
+	printf(";;; app | video session: maxDpbSlots=%d maxActiveReferences=%d memorySizeMB=%.2f dqueueFamily=%d\n",
+	    maxDpbSlots, maxActiveReferencePictures, ((double)totalMemorySize / (1024.0f * 1024.0f)), videoQueueFamily);
+    }
 
     // Make sure we do not use dangling (on the stack) pointers
     createInfo.pNext = nullptr;
