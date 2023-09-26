@@ -17,8 +17,6 @@
 #ifndef _VULKANAV1DECODER_H_
 #define _VULKANAV1_DECOER_H_
 
-#include "vk_video/vulkan_video_codec_av1std.h"
-#include "vkvideo_parser/StdVideoPictureParametersSet.h"
 #include "VulkanVideoDecoder.h"
 
 #include <array>
