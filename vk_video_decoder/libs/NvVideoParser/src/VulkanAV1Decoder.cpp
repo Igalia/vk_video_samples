@@ -197,7 +197,7 @@ void VulkanAV1Decoder::AddBuffertoDispQueue(VkPicIf* pDispPic)
 }
 #include <stdio.h>
 // kick-off decoding
-bool VulkanAV1Decoder::end_of_picture(const uint8_t* pdataIn, uint32_t dataSize, uint32_t dataOffset, uint8_t* pbSideDataIn, uint32_t sideDataSize)
+bool VulkanAV1Decoder::end_of_picture(const uint8_t*, uint32_t dataSize, uint32_t dataOffset, uint8_t* pbSideDataIn, uint32_t sideDataSize)
 {
     *m_pVkPictureData = VkParserPictureData();
     m_pVkPictureData->numSlices = m_PicData.num_tile_cols * m_PicData.num_tile_rows;  // set number of tiles as AV1 doesn't have slice concept
@@ -929,7 +929,7 @@ bool VulkanAV1Decoder::ParseObuSequenceHeader()
 
     if (m_bSPSReceived) {
         // @review: this is not correct
-        if (!memcmp(sps, &m_sps, sizeof(av1_seq_param_s)))
+        if (!memcmp((void*)sps, &m_sps, sizeof(av1_seq_param_s)))
             m_bSPSChanged = true;
     }
 
@@ -2364,7 +2364,6 @@ bool VulkanAV1Decoder::ParseOneFrame(const uint8_t* pdatain, int32_t datasize, c
     bool last_tile_group;
     int tile_start = 0;
     int tile_end = -1;
-    unsigned int parsedBytes = 0;
 
     while (datasize > 0) {
         memset(&hdr, 0, sizeof(hdr));
@@ -2399,7 +2398,6 @@ bool VulkanAV1Decoder::ParseOneFrame(const uint8_t* pdatain, int32_t datasize, c
                 m_nalu.start_offset += hdr.payload_size;
                 pdatain  += (hdr.payload_size + hdr.header_size);
                 datasize -= (hdr.payload_size + hdr.header_size);
-                parsedBytes   += (hdr.payload_size + hdr.header_size);
                 continue;
             }
         }
@@ -2512,7 +2510,6 @@ bool VulkanAV1Decoder::ParseOneFrame(const uint8_t* pdatain, int32_t datasize, c
         m_nalu.start_offset += hdr.payload_size;
         pdatain += (hdr.payload_size + hdr.header_size);
         datasize -= (hdr.payload_size + hdr.header_size);
-        parsedBytes += (hdr.payload_size + hdr.header_size);
 
         assert(datasize >= 0);
     }

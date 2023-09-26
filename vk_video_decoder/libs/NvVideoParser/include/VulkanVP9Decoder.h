@@ -1538,9 +1538,9 @@ public:
     // TODO: Need to implement these functions.
     bool                    IsPictureBoundary(int32_t) { return true; };
     int32_t                 ParseNalUnit() { return NALU_UNKNOWN; };
-    bool                    DecodePicture(VkParserPictureData *pnvdp) { return false; };
+    bool                    DecodePicture(VkParserPictureData *) { return false; };
     void                    InitParser() {}
-    bool                    BeginPicture(VkParserPictureData *pnvpd) { return false; }
+    bool                    BeginPicture(VkParserPictureData *) { return false; }
     void                    CreatePrivateContext() {}
     void                    FreeContext() {}
 };

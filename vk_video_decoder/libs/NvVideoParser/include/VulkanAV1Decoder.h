@@ -15,7 +15,7 @@
 */
 
 #ifndef _VULKANAV1DECODER_H_
-#define _VULKANAV1_DECOER_H_
+#define _VULKANAV1DECODER_H_
 
 #include "VulkanVideoDecoder.h"
 
@@ -365,29 +365,29 @@ struct av1_seq_param_s : public StdVideoPictureParametersSet, public StdVideoAV1
 
     VkSharedBaseObj<VkVideoRefCountBase> client;
 
-    virtual int32_t GetVpsId(bool& isVps) const {
+    int32_t GetVpsId(bool& isVps) const override {
         isVps = false;
         return -1;
     }
 
-    virtual int32_t GetSpsId(bool& isSps) const {
+    int32_t GetSpsId(bool& isSps) const override {
         isSps = false;
         return -1;
     }
 
-    virtual int32_t GetPpsId(bool& isPps) const {
+    int32_t GetPpsId(bool& isPps) const override {
         isPps = false;
         return -1;
     }
 
-    virtual int32_t GetAv1SpsId(bool& isSps) const {
+    int32_t GetAv1SpsId(bool& isSps) const override {
         isSps = true;
         return 0; // @review: what is the equivalent of parameter_set_id for AV1?
     }
 
     const StdVideoAV1SequenceHeader*    GetStdAV1Sps() const override { return this; }
 
-    virtual const char* GetRefClassId() const { return m_refClassId; }
+    const char* GetRefClassId() const override { return m_refClassId; }
 
     uint64_t SetSequenceCount(uint64_t updateSequenceCount) {
         assert(updateSequenceCount <= std::numeric_limits<uint32_t>::max());
@@ -395,7 +395,7 @@ struct av1_seq_param_s : public StdVideoPictureParametersSet, public StdVideoAV1
         return m_updateSequenceCount;
     }
 
-    virtual bool GetClientObject(VkSharedBaseObj<VkVideoRefCountBase>& clientObject) const
+    bool GetClientObject(VkSharedBaseObj<VkVideoRefCountBase>& clientObject) const override
     {
         clientObject = client;
         return !!clientObject;
@@ -610,15 +610,15 @@ public:
     bool                    ParseByteStream(const VkParserBitstreamPacket* pck, size_t* pParsedBytes) override;
 
 protected:
-    bool                    IsPictureBoundary(int32_t)                          { return true; };
-    int32_t                 ParseNalUnit()                                  { return NALU_UNKNOWN; };
-    bool                    DecodePicture(VkParserPictureData *pnvdp)            { return false; };
+    bool                    IsPictureBoundary(int32_t) override             { return true; };
+    int32_t                 ParseNalUnit() override                         { return NALU_UNKNOWN; };
+    bool                    DecodePicture(VkParserPictureData *)            { return false; };
     bool                    end_of_picture(const uint8_t* pdataIn, uint32_t dataSize, uint32_t dataOffset, uint8_t* pbSideDataIn = NULL, uint32_t sideDataSize = 0);
-    void                    InitParser();
-    bool                    BeginPicture(VkParserPictureData *pnvpd);
+    void                    InitParser() override;
+    bool                    BeginPicture(VkParserPictureData *pnvpd) override;
     void                    lEndPicture(VkPicIf* pDispPic, bool bEvict);
     bool                    ParseOneFrame(const uint8_t* pdatain, int32_t datasize, const VkParserBitstreamPacket* pck, int* pParsedBytes);
-    void                    EndOfStream();
+    void                    EndOfStream() override;
 
     uint32_t read_u16_le(const void *vmem) {
         uint32_t val;
@@ -704,8 +704,8 @@ protected:
     bool                    AddBuffertoOutputQueue(VkPicIf* pDispPic, bool bShowableFrame);
     void                    AddBuffertoDispQueue(VkPicIf* pDispPic);
 
-    void                    CreatePrivateContext() {}
-    void                    FreeContext() {}
+    void                    CreatePrivateContext() override {}
+    void                    FreeContext() override {}
     int                     GetRelativeDist(int a, int b);
 };
 #endif // ENABLE_AV1_DECODER
