@@ -716,7 +716,6 @@ protected:
     uint32_t m_outOfBandPictureParameters : 1;
     uint32_t m_inlinedPictureParametersUseBeginCoding : 1;
     int8_t m_pictureToDpbSlotMap[MAX_FRM_CNT];
-    int8_t m_previousFrameSetupSlot;
 
 public:
     static bool m_dumpParserData;
@@ -965,7 +964,6 @@ VkResult VulkanVideoParser::Initialize(
         return VK_ERROR_VIDEO_PROFILE_CODEC_NOT_SUPPORTED_KHR;
     }
 
-    m_previousFrameSetupSlot = 0;
     return CreateVulkanVideoDecodeParser(m_codecType, pStdExtensionVersion, &nvParserLog, 1, &nvdp, m_vkParser);
 }
 
@@ -2345,7 +2343,6 @@ bool VulkanVideoParser::DecodePicture(
         hdr.render_height_minus_1 = pin->height - 1;
         hdr.coded_denom = pin->coded_denom;
         hdr.refresh_frame_flags = pin->refresh_frame_flags;
-        m_previousFrameSetupSlot = PicIdx;
 
         hdr.interpolation_filter = (StdVideoAV1InterpolationFilter)pin->interp_filter;
         hdr.TxMode = (StdVideoAV1TxMode)pin->tx_mode;
