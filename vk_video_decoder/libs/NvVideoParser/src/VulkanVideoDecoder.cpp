@@ -20,7 +20,9 @@
 #include "nvVulkanVideoUtils.h"
 #include "nvVulkanVideoParser.h"
 #include <algorithm>
+#ifdef ENABLE_VP9_DECODER
 #include <VulkanVP9Decoder.h>
+#endif
 
 VulkanVideoDecoder::VulkanVideoDecoder(VkVideoCodecOperationFlagBitsKHR std)
   : m_refCount(0),
@@ -924,10 +926,12 @@ VkResult CreateVulkanVideoDecodeParser(VkVideoCodecOperationFlagBitsKHR videoCod
         nvVideoDecodeParser =  VkSharedBaseObj<VulkanAV1Decoder>(new VulkanAV1Decoder(videoCodecOperation));
         break;
 #endif
+#ifdef ENABLE_VP9_DECODER
     case VK_VIDEO_CODEC_OPERATION_DECODE_VP9_BIT_KHR:
         // TODO: This will not work and is only here as a placeholder to get the compiler to include and link the class.
         nvVideoDecodeParser =  VkSharedBaseObj<VulkanVP9Decoder>(new VulkanVP9Decoder(videoCodecOperation));
         break;
+#endif
     default:
         nvParserErrorLog("Unsupported codec type!!!\n");
     }
