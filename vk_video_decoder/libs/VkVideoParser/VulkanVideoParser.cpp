@@ -171,10 +171,8 @@ struct nvVideoAV1PicParameters {
     uint16_t MiRowStarts[64];
     uint16_t width_in_sbs_minus_1[64];
     uint16_t height_in_sbs_minus_1[64];
-    StdVideoDecodeAV1PictureInfo stdPictureInfo;
+    StdVideoDecodeAV1PictureInfo stdPictureInfo; // memory for the pointer in pictureInfo
     VkVideoDecodeAV1PictureInfoKHR pictureInfo;
-    StdVideoAV1FrameHeader frameHeader;
-
     VkVideoDecodeAV1SessionParametersCreateInfoKHR pictureParameters;
     nvVideoDecodeAV1DpbSlotInfo dpbRefList[nvVideoDecodeAV1DpbSlotInfo::TOTAL_REFS_PER_FRAME + 1];
 };
@@ -1090,9 +1088,9 @@ uint32_t VulkanVideoParser::ResetPicDpbSlots(uint32_t picIndexSlotValidMask)
              ((picIdx < m_maxNumDecodeSurfaces) && resetSlotsMask); picIdx++) {
             if (resetSlotsMask & (1 << picIdx)) {
                 resetSlotsMask &= ~(1 << picIdx);
-		if (m_dumpDpbData) {
-		    printf(";;; Resetting picIdx %d, was using dpb slot %d\n", picIdx, m_pictureToDpbSlotMap[picIdx]);
-		}
+                if (m_dumpDpbData) {
+                    printf(";;; Resetting picIdx %d, was using dpb slot %d\n", picIdx, m_pictureToDpbSlotMap[picIdx]);
+                }
                 SetPicDpbSlot(picIdx, -1);
             }
         }
@@ -1701,35 +1699,35 @@ uint32_t VulkanVideoParser::FillDpbAV1State(
         std::cout << "Ref frames data: " << std::endl;
 
     if (m_dumpDpbData) {
-	printf(";;;; ======= AV1 DPB fill begin %d =======\n", m_nCurrentPictureID);
-	printf("ref_frame_idx: ");
-	for (int i = 0 ; i < 7; i++)
-	    printf("%02d ", i);
-	printf("\nref_frame_idx: ");
-	for (int i = 0 ; i < 7; i++)
-	    printf("%02d ", pin->ref_frame_idx[i]);
-	printf("\n");
+        printf(";;;; ======= AV1 DPB fill begin %d =======\n", m_nCurrentPictureID);
+        printf("ref_frame_idx: ");
+        for (int i = 0 ; i < 7; i++)
+            printf("%02d ", i);
+        printf("\nref_frame_idx: ");
+        for (int i = 0 ; i < 7; i++)
+            printf("%02d ", pin->ref_frame_idx[i]);
+        printf("\n");
 
-	printf("m_pictureToDpbSlotMap: ");
-	for (int i = 0; i < MAX_FRM_CNT; i++) {
-	    printf("%02d ", i);
-	}
-	printf("\nm_pictureToDpbSlotMap: ");
-	for (int i = 0; i < MAX_FRM_CNT; i++) {
-	    printf("%02d ", m_pictureToDpbSlotMap[i]);
-	}
-	printf("\n");
+        printf("m_pictureToDpbSlotMap: ");
+        for (int i = 0; i < MAX_FRM_CNT; i++) {
+            printf("%02d ", i);
+        }
+        printf("\nm_pictureToDpbSlotMap: ");
+        for (int i = 0; i < MAX_FRM_CNT; i++) {
+            printf("%02d ", m_pictureToDpbSlotMap[i]);
+        }
+        printf("\n");
 
-	printf("ref_frame_picture: ");
-	for (int32_t inIdx = 0; inIdx < STD_VIDEO_AV1_NUM_REF_FRAMES; inIdx++) {
-	    printf("%02d ", inIdx);
-	}
-	printf("\nref_frame_picture: ");
-	for (int32_t inIdx = 0; inIdx < STD_VIDEO_AV1_NUM_REF_FRAMES; inIdx++) {
-	    int8_t picIdx = GetPicIdx(pin->ref_frame_picture[inIdx]);
-	    printf("%02d ", picIdx);
-	}
-	printf("\n");
+        printf("ref_frame_picture: ");
+        for (int32_t inIdx = 0; inIdx < STD_VIDEO_AV1_NUM_REF_FRAMES; inIdx++) {
+            printf("%02d ", inIdx);
+        }
+        printf("\nref_frame_picture: ");
+        for (int32_t inIdx = 0; inIdx < STD_VIDEO_AV1_NUM_REF_FRAMES; inIdx++) {
+            int8_t picIdx = GetPicIdx(pin->ref_frame_picture[inIdx]);
+            printf("%02d ", picIdx);
+        }
+        printf("\n");
     }
 
     for (int32_t inIdx = 0; inIdx < STD_VIDEO_AV1_NUM_REF_FRAMES; inIdx++) {
@@ -1763,9 +1761,10 @@ uint32_t VulkanVideoParser::FillDpbAV1State(
             stdReferenceInfo.flags.disable_frame_end_update_cdf = frameParameters.disable_frame_end_update_cdf;
             stdReferenceInfo.flags.segmentation_enabled = frameParameters.segmentation_enabled;
 
-            for (size_t av1name = 0; av1name < sizeof(stdReferenceInfo.RefFrameSignedBiasValues); av1name += 1) {
-                stdReferenceInfo.RefFrameSignedBiasValues[av1name] = frameParameters.RefFrameSignBias[av1name];
-            }
+            // NOTE(charlie): This is broken after the latest spec updates.
+            // for (size_t av1name = 0; av1name < sizeof(stdReferenceInfo.RefFrameSignedBiasValues); av1name += 1) {
+            //     stdReferenceInfo.RefFrameSignedBiasValues[av1name] = frameParameters.RefFrameSignBias[av1name];
+            // }
 
             pReferenceSlots[referenceIndex].slotIndex = dpbSlot;
             pGopReferenceImagesIndexes[referenceIndex] = picIdx;
@@ -1774,11 +1773,11 @@ uint32_t VulkanVideoParser::FillDpbAV1State(
     }
 
     if (m_dumpDpbData) {
-	printf(";;; pReferenceSlots (%d): ", referenceIndex);
-	for (size_t i =0 ;i < referenceIndex; i++) {
-	    printf("%02d ", pReferenceSlots[i].slotIndex);
-	}
-	printf("\n");
+        printf(";;; pReferenceSlots (%d): ", referenceIndex);
+        for (size_t i =0 ;i < referenceIndex; i++) {
+            printf("%02d ", pReferenceSlots[i].slotIndex);
+        }
+        printf("\n");
     }
 
     ResetPicDpbSlots(refDpbUsedAndValidMask);
@@ -1802,19 +1801,19 @@ uint32_t VulkanVideoParser::FillDpbAV1State(
     }
 
     if (m_dumpDpbData) {
-	printf("SlotsInUse: ");
-	uint32_t slotsInUse = m_dpb.getSlotInUseMask();
-	for (int i = 0; i < 9; i++) {
-	    printf("%02d ", i);
-	}
-	uint8_t greenSquare[] = { 0xf0, 0x9f,  0x9f, 0xa9, 0x00 };
-	uint8_t redSquare[] = { 0xf0, 0x9f,  0x9f, 0xa5, 0x00 };
-	uint8_t yellowSquare[] = { 0xf0, 0x9f,  0x9f, 0xa8, 0x00 };
-	printf("\nSlotsInUse: ");
-	for (int i = 0; i < 9; i++) {
-	    printf("%-2s ", (slotsInUse & (1<<i)) ? (i == dpbSlot ? (char*)yellowSquare : (char*)greenSquare) : (char*)redSquare); 
-	}
-	printf("\n");
+        printf("SlotsInUse: ");
+        uint32_t slotsInUse = m_dpb.getSlotInUseMask();
+        for (int i = 0; i < 9; i++) {
+            printf("%02d ", i);
+        }
+        uint8_t greenSquare[] = { 0xf0, 0x9f,  0x9f, 0xa9, 0x00 };
+        uint8_t redSquare[] = { 0xf0, 0x9f,  0x9f, 0xa5, 0x00 };
+        uint8_t yellowSquare[] = { 0xf0, 0x9f,  0x9f, 0xa8, 0x00 };
+        printf("\nSlotsInUse: ");
+        for (int i = 0; i < 9; i++) {
+            printf("%-2s ", (slotsInUse & (1<<i)) ? (i == dpbSlot ? (char*)yellowSquare : (char*)greenSquare) : (char*)redSquare); 
+        }
+        printf("\n");
     }
 
     return referenceIndex;
@@ -2233,7 +2232,7 @@ bool VulkanVideoParser::DecodePicture(
         av1 = nvVideoAV1PicParameters();
         pCurrFrameDecParams->isAV1 = true;
         VkVideoDecodeAV1PictureInfoKHR* pPictureInfo = &av1.pictureInfo;
-	    av1.pictureInfo.pStdPictureInfo = &av1.stdPictureInfo;
+        av1.pictureInfo.pStdPictureInfo = &av1.stdPictureInfo;
         StdVideoDecodeAV1PictureInfo *pStdPictureInfo = &av1.stdPictureInfo;
 
         pCurrFrameDecParams->pStdPps = nullptr;
@@ -2280,23 +2279,21 @@ bool VulkanVideoParser::DecodePicture(
         pPictureInfo->sType = VK_STRUCTURE_TYPE_VIDEO_DECODE_AV1_PICTURE_INFO_KHR;
         pCurrFrameDecParams->decodeFrameInfo.pNext = &av1.pictureInfo;
 
-        // Setup the AV1 frame header
-        StdVideoAV1FrameHeader& hdr = av1.frameHeader;
         for (size_t i = 0; i < STD_VIDEO_AV1_REFS_PER_FRAME; i++)
         {
-            hdr.ref_frame_idx[i] = pin->ref_frame_idx[i];
-            hdr.ref_order_hint[i] = pin->ref_order_hint[pin->ref_frame_idx[i]];
+            // NVIDIA check
+            /*hdr.ref_order_hint[i] = pin->ref_order_hint[pin->ref_frame_idx[i]];*/
 
             int8_t picIdx = GetPicIdx(pin->ref_frame_picture[pin->ref_frame_idx[i]]);
             if (picIdx < 0) {
-                pPictureInfo->referenceNameSlotIndex[i] = -1;
+                pPictureInfo->referenceNameSlotIndices[i] = -1;
                 continue;
             }
 
             int8_t dpbSlot = GetPicDpbSlot(picIdx);
             assert(dpbSlot >= 0);
 
-            pPictureInfo->referenceNameSlotIndex[i] = dpbSlot;
+            pPictureInfo->referenceNameSlotIndices[i] = dpbSlot;
             //hdr.delta_frame_id_minus_1[dpbSlot] = pin->delta_frame_id_minus_1[pin->ref_frame_idx[i]];
         }
 
@@ -2306,11 +2303,11 @@ bool VulkanVideoParser::DecodePicture(
         }
         printf("\n%d referenceNameSlotIndex: ", m_nCurrentPictureID);
         for (int i = 0; i < STD_VIDEO_AV1_REFS_PER_FRAME; i++) {
-            printf("%02d ", pPictureInfo->referenceNameSlotIndex[i]);
+            printf("%02d ", pPictureInfo->referenceNameSlotIndices[i]);
         }
         printf("\n");
 
-        StdVideoAV1FrameHeaderFlags* flags = &hdr.flags;
+        StdVideoDecodeAV1PictureInfoFlags* flags = &pStdPictureInfo->flags;
         flags->disable_frame_end_update_cdf = pin->disable_frame_end_update_cdf;
         flags->error_resilient_mode = pin->error_resilient_mode;
         flags->disable_cdf_update = pin->disable_cdf_update;
@@ -2334,6 +2331,7 @@ bool VulkanVideoParser::DecodePicture(
         flags->delta_q_present = pin->delta_q_present;
         flags->UsesLr = 0; // ??
 
+        auto& hdr = *pStdPictureInfo;
         hdr.frame_type = (StdVideoAV1FrameType)pin->frame_type;
         hdr.frame_presentation_time = 0; // ??
         hdr.display_frame_id = 0; // ??
@@ -2429,16 +2427,16 @@ bool VulkanVideoParser::DecodePicture(
             cdef.cdef_uv_pri_strength[i] = pin->cdef_uv_pri_strength[i];
             cdef.cdef_uv_sec_strength[i] = pin->cdef_uv_sec_strength[i];
         }
-	    hdr.pCDEF = &cdef;
-
-	    memcpy(hdr.lr.lr_type, pin->lr_type, ARRAYSIZE(pin->lr_type));
+        hdr.pCDEF = &cdef;
+        memcpy(hdr.lr.lr_type, pin->lr_type, ARRAYSIZE(pin->lr_type));
         hdr.lr.lr_unit_shift = pin->lr_unit_shift;
         hdr.lr.lr_uv_shift = pin->lr_uv_shift;
 
         //  StdVideoAV1KHRGlobalMotion               global_motion[8]; // One per ref frame
         memset(&hdr.global_motion, 0, sizeof(StdVideoAV1GlobalMotion));
-        // There are 8 global motion params in the KHR headers, but only 7 from the parser, seems like the first
-	    // is always zero'd...
+        // There are 8 global motion params in the KHR headers, but
+        // only 7 from the parser, seems like the first is always
+        // zero'd...
         for (int i = 0; i < 7; i++) {
             const auto& parser_gm = pin->ref_global_motion[i];
             hdr.global_motion.GmType[i+1] = parser_gm.wmtype;
@@ -2494,7 +2492,6 @@ bool VulkanVideoParser::DecodePicture(
             fg.cr_luma_mult = pin->fgs.cr_luma_mult;
             fg.cr_offset = pin->fgs.cr_offset;
         }
-        av1.stdPictureInfo.pFrameHeader = &av1.frameHeader;
 
         hdr.SkipModeFrame[0] = pin->SkipModeFrame0;
         hdr.SkipModeFrame[1] = pin->SkipModeFrame1;

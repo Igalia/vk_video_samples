@@ -10702,13 +10702,14 @@ typedef struct VkVideoDecodeAV1ProfileInfoKHR {
     VkStructureType       sType;
     const void*           pNext;
     StdVideoAV1Profile    stdProfile;
+    VkBool32              filmGrainSupport;
 } VkVideoDecodeAV1ProfileInfoKHR;
 
 typedef struct VkVideoDecodeAV1CapabilitiesKHR {
     VkStructureType     sType;
     void*               pNext;
     StdVideoAV1Level    maxLevel;
-    VkBool32            filmGrainSupported;
+    VkBool32            intraBlockCopyWithoutSetup;
 } VkVideoDecodeAV1CapabilitiesKHR;
 
 typedef struct VkVideoDecodeAV1SessionParametersCreateInfoKHR {
@@ -10721,7 +10722,9 @@ typedef struct VkVideoDecodeAV1PictureInfoKHR {
     VkStructureType                        sType;
     const void*                            pNext;
     const StdVideoDecodeAV1PictureInfo*    pStdPictureInfo;
-    int32_t                                referenceNameSlotIndex[STD_VIDEO_AV1_REFS_PER_FRAME];
+    int32_t                                referenceNameSlotIndices[7];
+    uint32_t                               frameHeaderOffset;
+    uint32_t                               tileGroupOffset;
     uint32_t                               tileCount;
     const uint32_t*                        pTileOffsets;
     const uint32_t*                        pTileSizes;
