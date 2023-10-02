@@ -602,7 +602,8 @@ protected:
     VkPicIf*                    m_pOutFrame[MAX_NUM_SPATIAL_LAYERS];
     bool                        m_showableFrame[MAX_NUM_SPATIAL_LAYERS];
 
-    std::array<int, 512>        m_pSliceOffsets;
+    std::array<int, 256>        m_pSliceOffsets;
+    int                         m_numTiles;
 public:
     VulkanAV1Decoder(VkVideoCodecOperationFlagBitsKHR std);
     virtual ~VulkanAV1Decoder();
@@ -678,7 +679,7 @@ protected:
     int32_t                 SetupFrameSizeWithRefs();
 
     bool                    DecodeTileInfo();
-    void                    CalcTileOffsets(const uint8_t *base, const uint8_t *end, int offset, int tile_start, int tile_end);
+    void                    CalcTileOffsets(const uint8_t *base, const uint8_t *end, int offset, int tile_start, int tile_end, bool isFrameOBU);
     inline int32_t          ReadSignedBits(uint32_t bits);
     inline int32_t          ReadDeltaQ(uint32_t bits);
     uint32_t                SwGetUniform(uint32_t max_value);

@@ -236,7 +236,7 @@ av1-1-b10-23-filmgrain-50.ivf,Success,,,av1-1-b10-00-quantizer-22,Success
 ,,,,av1-1-b8-04-cdfupdate,Success
 ,,,,av1-1-b8-05-mv,Success
 ,,,,av1-1-b8-06-mfmv,Success
-,,,,av1-1-b8-22-svc-L1T2,Fail
+,,,,av1-1-b8-22-svc-L1T2,Success
 ,,,,av1-1-b8-22-svc-L2T1,Fail
 ,,,,av1-1-b8-22-svc-L2T2,Fail
 ,,,,av1-1-b8-23-film_grain-50,Success

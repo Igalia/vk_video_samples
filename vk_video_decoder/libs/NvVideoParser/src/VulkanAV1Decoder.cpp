@@ -614,6 +614,7 @@ bool VulkanAV1Decoder::ParseOBUHeaderAndSize(const uint8_t* data, uint32_t datas
 bool VulkanAV1Decoder::ParseObuTemporalDelimiter()
 {
     m_pSliceOffsets.fill(0);
+    m_numTiles = 0;
     return true;
 }
 
@@ -2327,7 +2328,7 @@ bool IsObuInCurrentOperatingPoint(int  current_operating_point, AV1ObuHeader *hd
     return false;
 }
 
-void VulkanAV1Decoder::CalcTileOffsets(const uint8_t *base, const uint8_t *end, int offset, int tile_start, int tile_end)
+void VulkanAV1Decoder::CalcTileOffsets(const uint8_t *base, const uint8_t *end, int offset, int tile_start, int tile_end, bool isFrameOBU)
 {
     int tile_size_bytes = tile_sz_mag + 1;
     const uint8_t* ptr = base;
@@ -2348,8 +2349,14 @@ void VulkanAV1Decoder::CalcTileOffsets(const uint8_t *base, const uint8_t *end, 
 
         assert((ptr - base) < INT_MAX);
         assert(size < INT_MAX);
-        m_pSliceOffsets[2 * tile_id] = offset + (int)(ptr - base);
-        m_pSliceOffsets[2 * tile_id + 1] = (int)size;
+        if (!isFrameOBU) {
+            m_pSliceOffsets[m_numTiles * 2] = offset + (int)(ptr - base);
+            m_pSliceOffsets[m_numTiles * 2 + 1] = (int)size;
+        } else {
+            m_pSliceOffsets[tile_id * 2] = offset + (int)(ptr - base);
+            m_pSliceOffsets[tile_id * 2 + 1] = (int)size;
+        }
+        m_numTiles++;
         ptr += size;
     }
 }
@@ -2421,16 +2428,16 @@ bool VulkanAV1Decoder::ParseOneFrame(const uint8_t* pdatain, int32_t datasize, c
 
             if (hdr.type != AV1_OBU_FRAME) break;
 
-//#if NVCFG(GLOBAL_FEATURE_GR1524_NVDECODE_API_EXTRACT_SEI_DATA)
-#if 0
-            m_SEIMessageIdx = (m_SEIMessageIdx + 1) % 2;
-#endif
             // byte align before reading tile group header
             while (!byte_aligned())
                 u(1);
-
-            ParseObuTileGroupHeader(tile_start, tile_end, last_tile_group, 1);
-
+        }   // fallthru
+        case AV1_OBU_TILE_GROUP:
+        {
+            bool isFrameOBU = hdr.type == AV1_OBU_FRAME;
+            ParseObuTileGroupHeader(tile_start, tile_end, last_tile_group, isFrameOBU);
+            while (!byte_aligned())
+                u(1);
             consumedBytes = (consumed_bits() + 7) / 8;
             assert(consumedBytes < hdr.payload_size);
 
@@ -2439,12 +2446,10 @@ bool VulkanAV1Decoder::ParseOneFrame(const uint8_t* pdatain, int32_t datasize, c
             uint8_t* pTileGroupPayloadDataEnd = pTileGroupPayloadDataStart + tileGroupSizeBytes;
             assert((m_nalu.start_offset + consumedBytes) < UINT_MAX);
             uint32_t tileGroupStartOffestInOBU = (uint32_t)(m_nalu.start_offset) + consumedBytes;
-            bool bStatus = true;
-            CalcTileOffsets(pTileGroupPayloadDataStart, pTileGroupPayloadDataEnd, tileGroupStartOffestInOBU, tile_start, tile_end);
-            bStatus = end_of_picture(pTileGroupPayloadDataStart, tileGroupSizeBytes, tileGroupStartOffestInOBU);
-            if (!bStatus) {
-                return false;
-            }
+            CalcTileOffsets(pTileGroupPayloadDataStart, pTileGroupPayloadDataEnd, tileGroupStartOffestInOBU, tile_start, tile_end, isFrameOBU);
+            if (isFrameOBU || m_numTiles == m_PicData.num_tile_cols*m_PicData.num_tile_rows)
+                if (!end_of_picture(NULL, tileGroupSizeBytes, tileGroupStartOffestInOBU))
+                    return false;
             break;
         }
 //#if NVCFG(GLOBAL_FEATURE_GR1524_NVDECODE_API_EXTRACT_SEI_DATA)

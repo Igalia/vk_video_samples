@@ -630,7 +630,7 @@ typedef struct VkParserAv1PictureData {
 
     VkParserAv1GlobalMotionParameters ref_global_motion[7];
     
-    int slice_offsets_and_size[512]; // Max AV1 tiles (256) * 2
+    int slice_offsets_and_size[256]; // Max AV1 tiles (128) * 2
 } VkParserAv1PictureData;
 
 typedef struct VkParserPictureData {
