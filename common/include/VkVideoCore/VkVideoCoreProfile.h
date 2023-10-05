@@ -37,10 +37,10 @@ typedef enum StdChromaFormatIdc {
 } StdChromaFormatIdc;
 
 #if defined(__linux) || defined(__linux__) || defined(linux)
-static_assert((uint32_t)chroma_format_idc_monochrome == (uint32_t)STD_VIDEO_H265_CHROMA_FORMAT_IDC_MONOCHROME);
-static_assert((uint32_t)chroma_format_idc_420        == (uint32_t)STD_VIDEO_H265_CHROMA_FORMAT_IDC_420);
-static_assert((uint32_t)chroma_format_idc_422        == (uint32_t)STD_VIDEO_H265_CHROMA_FORMAT_IDC_422);
-static_assert((uint32_t)chroma_format_idc_444        == (uint32_t)STD_VIDEO_H265_CHROMA_FORMAT_IDC_444);
+static_assert((uint32_t)chroma_format_idc_monochrome == (uint32_t)STD_VIDEO_H265_CHROMA_FORMAT_IDC_MONOCHROME, "bad format");
+static_assert((uint32_t)chroma_format_idc_420        == (uint32_t)STD_VIDEO_H265_CHROMA_FORMAT_IDC_420, "bad format");
+static_assert((uint32_t)chroma_format_idc_422        == (uint32_t)STD_VIDEO_H265_CHROMA_FORMAT_IDC_422, "bad format");
+static_assert((uint32_t)chroma_format_idc_444        == (uint32_t)STD_VIDEO_H265_CHROMA_FORMAT_IDC_444, "bad format");
 #endif
 
 class VkVideoCoreProfile

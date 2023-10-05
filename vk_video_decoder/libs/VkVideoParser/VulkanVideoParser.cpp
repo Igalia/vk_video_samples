@@ -33,6 +33,7 @@
 #include "VkVideoCore/VkVideoCoreProfile.h"
 #include "StdVideoPictureParametersSet.h"
 
+#define HEADLESS_AV1 0
 #if ENABLE_AV1_DECODER
 // @review: Include this in vulkan_core.h
 #include "vk_video/vulkan_video_codec_av1std_decode.h"
@@ -602,7 +603,7 @@ public:
         VkPicIf* pPicBuf,
         int64_t llPTS); // Called when a picture is ready to be displayed
     virtual void UnhandledNALU(
-        const uint8_t* pbData, size_t cbData) {}; // Called for custom NAL parsing (not required)
+        const uint8_t* /*pbData*/, size_t /*cbData*/) {}; // Called for custom NAL parsing (not required)
 
     virtual uint32_t GetDecodeCaps()
     {
@@ -1235,7 +1236,7 @@ int32_t VulkanVideoParser::BeginSequence(const VkParserSequenceInfo* pnvsi)
 uint32_t VulkanVideoParser::FillDpbH264State(
     const VkParserPictureData* pd, const VkParserH264DpbEntry* dpbIn,
     uint32_t maxDpbInSlotsInUse, nvVideoDecodeH264DpbSlotInfo* pDpbRefList,
-    uint32_t maxRefPictures, VkVideoReferenceSlotInfoKHR* pReferenceSlots,
+    uint32_t /*maxRefPictures*/, VkVideoReferenceSlotInfoKHR* pReferenceSlots,
     int8_t* pGopReferenceImagesIndexes,
     StdVideoDecodeH264PictureInfoFlags currPicFlags,
     int32_t* pCurrAllocatedSlotIndex)
@@ -1469,7 +1470,7 @@ uint32_t VulkanVideoParser::FillDpbH264State(
 uint32_t VulkanVideoParser::FillDpbH265State(
     const VkParserPictureData* pd, const VkParserHevcPictureData* pin,
     nvVideoDecodeH265DpbSlotInfo* pDpbSlotInfo,
-    StdVideoDecodeH265PictureInfo* pStdPictureInfo, uint32_t maxRefPictures,
+    StdVideoDecodeH265PictureInfo* pStdPictureInfo, uint32_t /*maxRefPictures*/,
     VkVideoReferenceSlotInfoKHR* pReferenceSlots,
     int8_t* pGopReferenceImagesIndexes,
     int32_t* pCurrAllocatedSlotIndex)
@@ -1657,6 +1658,8 @@ uint32_t VulkanVideoParser::FillDpbH265State(
         pStdPictureInfo->RefPicSetLtCurr[numPocLtCurr++] = 0xff;
     }
 
+    (void)numPocTotalCurr; // TODO
+
     for (int32_t i = 0; i < 8; i++) {
         if (m_dumpParserData)
             std::cout << "\tlist indx " << i << ": "
@@ -1683,7 +1686,7 @@ uint32_t VulkanVideoParser::FillDpbH265State(
 uint32_t VulkanVideoParser::FillDpbAV1State(
     const VkParserPictureData* pd, const VkParserAv1PictureData * pin,
     nvVideoDecodeAV1DpbSlotInfo* pDpbSlotInfo,
-    StdVideoDecodeAV1PictureInfo* pStdPictureInfo, uint32_t maxRefPictures,
+    StdVideoDecodeAV1PictureInfo* , uint32_t , // TODO: unused parameters
     VkVideoReferenceSlotInfoKHR* pReferenceSlots,
     int8_t* pGopReferenceImagesIndexes,
     int32_t* pCurrAllocatedSlotIndex)
@@ -1818,7 +1821,7 @@ uint32_t VulkanVideoParser::FillDpbAV1State(
 
 int8_t VulkanVideoParser::AllocateDpbSlotForCurrentH264(
     vkPicBuffBase* pPic, StdVideoDecodeH264PictureInfoFlags currPicFlags,
-    int8_t presetDpbSlot)
+    int8_t /*presetDpbSlot*/)
 {
     // Now, map the current render target
     int8_t dpbSlot = -1;
@@ -1840,7 +1843,7 @@ int8_t VulkanVideoParser::AllocateDpbSlotForCurrentH264(
 }
 
 int8_t VulkanVideoParser::AllocateDpbSlotForCurrentH265(vkPicBuffBase* pPic,
-    bool isReference, int8_t presetDpbSlot)
+    bool isReference, int8_t /*presetDpbSlot*/)
 {
     // Now, map the current render target
     int8_t dpbSlot = -1;
@@ -1861,7 +1864,7 @@ int8_t VulkanVideoParser::AllocateDpbSlotForCurrentH265(vkPicBuffBase* pPic,
 }
 
 int8_t VulkanVideoParser::AllocateDpbSlotForCurrentAV1(vkPicBuffBase* pPic,
-    bool isReference, int8_t presetDpbSlot)
+    bool isReference, int8_t /*presetDpbSlot*/)
 {
     int8_t dpbSlot = -1;
     int8_t currPicIdx = GetPicIdx(pPic);
@@ -1927,7 +1930,7 @@ bool VulkanVideoParser::UpdatePictureParameters(
 }
 
 bool VulkanVideoParser::DecodePicture(
-    VkParserPictureData* pd, vkPicBuffBase* pVkPicBuff,
+    VkParserPictureData* pd, vkPicBuffBase* /*pVkPicBuff*/,
     VkParserDecodePictureInfo* pDecodePictureInfo)
 {
     bool bRet = false;
