@@ -10696,6 +10696,7 @@ VKAPI_ATTR VkResult VKAPI_CALL vkGetPhysicalDeviceCooperativeMatrixPropertiesKHR
 #define VK_KHR_video_decode_av1 1
 #include "vk_video/vulkan_video_codec_av1std.h"
 #include "vk_video/vulkan_video_codec_av1std_decode.h"
+#define VK_MAX_VIDEO_DECODE_AV1_REFERENCES_PER_FRAME_KHR 7U
 #define VK_KHR_VIDEO_DECODE_AV1_SPEC_VERSION 1
 #define VK_KHR_VIDEO_DECODE_AV1_EXTENSION_NAME "VK_KHR_video_decode_av1"
 typedef struct VkVideoDecodeAV1ProfileInfoKHR {
@@ -10722,7 +10723,7 @@ typedef struct VkVideoDecodeAV1PictureInfoKHR {
     VkStructureType                        sType;
     const void*                            pNext;
     const StdVideoDecodeAV1PictureInfo*    pStdPictureInfo;
-    int32_t                                referenceNameSlotIndices[7];
+    int32_t                                referenceNameSlotIndices[VK_MAX_VIDEO_DECODE_AV1_REFERENCES_PER_FRAME_KHR];
     uint32_t                               frameHeaderOffset;
     uint32_t                               tileGroupOffset;
     uint32_t                               tileCount;

@@ -126,6 +126,7 @@ typedef struct StdVideoAV1ColorConfig {
     uint8_t                        matrix_coefficients;
     uint8_t                        chroma_sample_position;
     uint8_t                        reserved1;
+    uint32_t                       reserved2;
 } StdVideoAV1ColorConfig;
 
 typedef struct StdVideoAV1TimingInfoFlags {
@@ -143,18 +144,18 @@ typedef struct StdVideoAV1TimingInfo {
 typedef struct StdVideoAV1LoopFilterFlags {
     uint32_t    loop_filter_delta_enabled : 1;
     uint32_t    loop_filter_delta_update : 1;
-    uint32_t    update_ref_delta : 1;
-    uint32_t    update_mode_delta : 1;
-    uint32_t    reserved : 28;
+    uint32_t    reserved : 30;
 } StdVideoAV1LoopFilterFlags;
 
 typedef struct StdVideoAV1LoopFilter {
     StdVideoAV1LoopFilterFlags    flags;
     uint8_t                       loop_filter_level[4];
     uint8_t                       loop_filter_sharpness;
+    uint8_t                       update_ref_delta;
     int8_t                        loop_filter_ref_deltas[STD_VIDEO_AV1_TOTAL_REFS_PER_FRAME];
+    uint8_t                       update_mode_delta;
     int8_t                        loop_filter_mode_deltas[2];
-    uint8_t                       reserved1[5];
+    uint8_t                       reserved1[3];
 } StdVideoAV1LoopFilter;
 
 typedef struct StdVideoAV1QuantizationFlags {
@@ -166,11 +167,11 @@ typedef struct StdVideoAV1QuantizationFlags {
 typedef struct StdVideoAV1Quantization {
     StdVideoAV1QuantizationFlags    flags;
     uint8_t                         base_q_idx;
-    int8_t                          deltaQYDc;
-    int8_t                          deltaQUDc;
-    int8_t                          deltaQUAc;
-    int8_t                          deltaQVDc;
-    int8_t                          deltaQVAc;
+    int8_t                          DeltaQYDc;
+    int8_t                          DeltaQUDc;
+    int8_t                          DeltaQUAc;
+    int8_t                          DeltaQVDc;
+    int8_t                          DeltaQVAc;
     uint8_t                         qm_y;
     uint8_t                         qm_u;
     uint8_t                         qm_v;
@@ -189,13 +190,13 @@ typedef struct StdVideoAV1TileInfoFlags {
 
 typedef struct StdVideoAV1TileInfo {
     StdVideoAV1TileInfoFlags    flags;
-    uint8_t                     tileCols;
-    uint8_t                     tileRows;
+    uint8_t                     TileCols;
+    uint8_t                     TileRows;
     uint16_t                    context_update_tile_id;
-    const uint16_t*             MiColStarts;
-    const uint16_t*             MiRowStarts;
-    const uint16_t*             width_in_sbs_minus_1;
-    const uint16_t*             height_in_sbs_minus_1;
+    const uint16_t*             pMiColStarts;
+    const uint16_t*             pMiRowStarts;
+    const uint16_t*             pWidthInSbsMinus1;
+    const uint16_t*             pHeightInSbsMinus1;
     uint8_t                     tile_size_bytes_minus_1;
 } StdVideoAV1TileInfo;
 
@@ -276,11 +277,7 @@ typedef struct StdVideoAV1SequenceHeaderFlags {
     uint32_t    film_grain_params_present : 1;
     uint32_t    timing_info_present_flag : 1;
     uint32_t    initial_display_delay_present_flag : 1;
-    uint32_t    seq_choose_screen_content_tools : 1;
-    uint32_t    seq_force_screen_content_tools : 1;
-    uint32_t    seq_choose_integer_mv : 1;
-    uint32_t    seq_force_integer_mv : 1;
-    uint32_t    reserved : 9;
+    uint32_t    reserved : 13;
 } StdVideoAV1SequenceHeaderFlags;
 
 typedef struct StdVideoAV1SequenceHeader {
@@ -294,7 +291,8 @@ typedef struct StdVideoAV1SequenceHeader {
     uint8_t                           additional_frame_id_length_minus_1;
     uint8_t                           order_hint_bits_minus_1;
     uint8_t                           seq_force_integer_mv;
-    uint8_t                           reserved1[6];
+    uint8_t                           seq_force_screen_content_tools;
+    uint8_t                           reserved1[5];
     StdVideoAV1ColorConfig            color_config;
     StdVideoAV1TimingInfo             timing_info;
 } StdVideoAV1SequenceHeader;

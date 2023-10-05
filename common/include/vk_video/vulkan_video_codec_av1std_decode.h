@@ -23,9 +23,9 @@ extern "C" {
 #define vulkan_video_codec_av1std_decode 1
 #include "vulkan_video_codec_av1std.h"
 
-#define VK_STD_VULKAN_VIDEO_CODEC_AV1_DECODE_API_VERSION_0_9_2 VK_MAKE_VIDEO_STD_VERSION(0, 9, 2)
+#define VK_STD_VULKAN_VIDEO_CODEC_AV1_DECODE_API_VERSION_0_9_3 VK_MAKE_VIDEO_STD_VERSION(0, 9, 3)
 
-#define VK_STD_VULKAN_VIDEO_CODEC_AV1_DECODE_SPEC_VERSION VK_STD_VULKAN_VIDEO_CODEC_AV1_DECODE_API_VERSION_0_9_2
+#define VK_STD_VULKAN_VIDEO_CODEC_AV1_DECODE_SPEC_VERSION VK_STD_VULKAN_VIDEO_CODEC_AV1_DECODE_API_VERSION_0_9_3
 #define VK_STD_VULKAN_VIDEO_CODEC_AV1_DECODE_EXTENSION_NAME "VK_STD_vulkan_video_codec_av1_decode"
 typedef struct StdVideoDecodeAV1PictureInfoFlags {
     uint32_t    error_resilient_mode : 1;
@@ -67,7 +67,7 @@ typedef struct StdVideoDecodeAV1PictureInfo {
     uint32_t                             display_frame_id;
     uint32_t                             current_frame_id;
     uint8_t                              frame_to_show_map_idx;
-    uint8_t                              order_hint;
+    uint8_t                              OrderHint;
     uint8_t                              primary_ref_frame;
     uint8_t                              refresh_frame_flags;
     uint16_t                             frame_width_minus_1;
@@ -79,14 +79,12 @@ typedef struct StdVideoDecodeAV1PictureInfo {
     uint8_t                              delta_q_res;
     uint8_t                              delta_lf_res;
     uint8_t                              SkipModeFrame[2];
+    uint8_t                              coded_denom;
     uint16_t                             tg_start;
     uint16_t                             tg_end;
-    uint8_t                              coded_denom;
-    uint8_t                              RefOrderHintValues[STD_VIDEO_AV1_REFS_PER_FRAME];
-    int8_t                               RefFrameSignedBiasValues[STD_VIDEO_AV1_REFS_PER_FRAME];
-    uint8_t                              reserved1;
-    uint16_t                             ExpectedFrameIdValues[STD_VIDEO_AV1_REFS_PER_FRAME];
-    uint16_t                             reserved2;
+    uint8_t                              OrderHints[STD_VIDEO_AV1_NUM_REF_FRAMES];
+    uint16_t                             delta_frame_id_minus_1[STD_VIDEO_AV1_NUM_REF_FRAMES];
+    uint32_t                             expectedFrameId[STD_VIDEO_AV1_NUM_REF_FRAMES];
     StdVideoAV1LoopFilter                loop_filter;
     StdVideoAV1Quantization              quantization;
     const StdVideoAV1Segmentation*       pSegmentation;
@@ -100,13 +98,15 @@ typedef struct StdVideoDecodeAV1PictureInfo {
 typedef struct StdVideoDecodeAV1ReferenceInfoFlags {
     uint32_t    disable_frame_end_update_cdf : 1;
     uint32_t    segmentation_enabled : 1;
-    uint32_t    reserved : 30;
+    uint32_t    RefFrameSignBias: 1;
+    uint32_t    reserved : 29;
 } StdVideoDecodeAV1ReferenceInfoFlags;
 
 typedef struct StdVideoDecodeAV1ReferenceInfo {
     StdVideoDecodeAV1ReferenceInfoFlags    flags;
     uint8_t                                frame_type;
-    uint8_t                                base_q_idx;
+    uint8_t                                OrderHint;
+    uint8_t                                SavedOrderHints[STD_VIDEO_AV1_NUM_REF_FRAMES];
 } StdVideoDecodeAV1ReferenceInfo;
 
 

@@ -1755,7 +1755,6 @@ uint32_t VulkanVideoParser::FillDpbAV1State(
             // use active_ref_name to associate [i] to dpbslots.
             const ExtraAV1Parameters &frameParameters = pin->refFrameParams[inIdx];
             stdReferenceInfo.frame_type = frameParameters.frame_type;
-            stdReferenceInfo.base_q_idx = frameParameters.base_q_index;
             stdReferenceInfo.flags.disable_frame_end_update_cdf = frameParameters.disable_frame_end_update_cdf;
             stdReferenceInfo.flags.segmentation_enabled = frameParameters.segmentation_enabled;
 
@@ -2335,7 +2334,7 @@ bool VulkanVideoParser::DecodePicture(
         hdr.display_frame_id = 0; // ??
         hdr.current_frame_id = 0; // PicIdx;
         hdr.frame_to_show_map_idx = 0; //PicIdx; // ?? should just keep the raw header here.
-        hdr.order_hint = pin->frame_offset;
+        hdr.OrderHint = pin->frame_offset;
         hdr.primary_ref_frame = pin->primary_ref_frame;
         hdr.frame_width_minus_1 = pin->width - 1;
         hdr.frame_height_minus_1 = pin->height - 1;
@@ -2355,12 +2354,12 @@ bool VulkanVideoParser::DecodePicture(
             av1.MiRowStarts[i] = pin->tile_row_start_sb[i];
         }
         hdr.tile_info.flags.uniform_tile_spacing_flag = pin->uniform_tile_spacing_flag;
-        hdr.tile_info.tileCols = pin->num_tile_cols;
-        hdr.tile_info.tileRows = pin->num_tile_rows;
-        hdr.tile_info.MiColStarts = av1.MiColStarts;
-        hdr.tile_info.MiRowStarts = av1.MiRowStarts;
-        hdr.tile_info.width_in_sbs_minus_1 = av1.width_in_sbs_minus_1;
-        hdr.tile_info.height_in_sbs_minus_1 = av1.height_in_sbs_minus_1;
+        hdr.tile_info.TileCols = pin->num_tile_cols;
+        hdr.tile_info.TileRows = pin->num_tile_rows;
+        hdr.tile_info.pMiColStarts = av1.MiColStarts;
+        hdr.tile_info.pMiRowStarts = av1.MiRowStarts;
+        hdr.tile_info.pWidthInSbsMinus1 = av1.width_in_sbs_minus_1;
+        hdr.tile_info.pHeightInSbsMinus1 = av1.height_in_sbs_minus_1;
         pPictureInfo->pTileOffsets = av1.tileOffsets;
         pPictureInfo->pTileSizes = av1.tileSizes;
         hdr.tile_info.context_update_tile_id = pin->context_update_tile_id;
@@ -2379,10 +2378,10 @@ bool VulkanVideoParser::DecodePicture(
         hdr.quantization.flags.using_qmatrix = pin->using_qmatrix;
         hdr.quantization.flags.diff_uv_delta = 0; // ??
         hdr.quantization.base_q_idx = pin->base_qindex;
-        hdr.quantization.deltaQYDc = pin->qp_y_dc_delta_q;
-        hdr.quantization.deltaQUDc = pin->qp_u_dc_delta_q;
-        hdr.quantization.deltaQUAc = pin->qp_u_ac_delta_q;
-        hdr.quantization.deltaQVAc = pin->qp_v_ac_delta_q;
+        hdr.quantization.DeltaQYDc = pin->qp_y_dc_delta_q;
+        hdr.quantization.DeltaQUDc = pin->qp_u_dc_delta_q;
+        hdr.quantization.DeltaQUAc = pin->qp_u_ac_delta_q;
+        hdr.quantization.DeltaQVAc = pin->qp_v_ac_delta_q;
         hdr.quantization.qm_y = pin->qm_y;
         hdr.quantization.qm_u = pin->qm_u;
         hdr.quantization.qm_v = pin->qm_v;
