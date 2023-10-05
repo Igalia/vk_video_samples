@@ -426,7 +426,8 @@ find_path(SPIRV_TOOLS_INCLUDE_DIR spirv-tools/libspirv.h HINTS "${EXTERNAL_SOURC
 
 
 set(SHADERC_ROOT_PATH "${EXTERNAL_SOURCE_ROOT}/shaderc/${BUILDTGT_DIR}")
-set(SHADERC_SEARCH_PATH "${SHADERC_ROOT_PATH}/install/lib")
+# TODO: use pkg-config? lib vs lib64
+set(SHADERC_SEARCH_PATH "${SHADERC_ROOT_PATH}/install/lib64")
 
 
 find_library(VULKAN_LIB NAMES vulkan
