@@ -1760,12 +1760,12 @@ uint32_t VulkanVideoParser::FillDpbAV1State(
             stdReferenceInfo.frame_type = frameParameters.frame_type;
             stdReferenceInfo.flags.disable_frame_end_update_cdf = frameParameters.disable_frame_end_update_cdf;
             stdReferenceInfo.flags.segmentation_enabled = frameParameters.segmentation_enabled;
-
-            // NOTE(charlie): This is broken after the latest spec updates.
-            // for (size_t av1name = 0; av1name < sizeof(stdReferenceInfo.RefFrameSignedBiasValues); av1name += 1) {
-            //     stdReferenceInfo.RefFrameSignedBiasValues[av1name] = frameParameters.RefFrameSignBias[av1name];
-            // }
-
+            stdReferenceInfo.OrderHint = frameParameters.order_hint;
+            assert(frameParameters.RefFrameSignBias[inIdx] == 0 || frameParameters.RefFrameSignBias[inIdx] == 1);
+            for (int i = 0; i < STD_VIDEO_AV1_NUM_REF_FRAMES; i++) {
+                stdReferenceInfo.RefFrameSignBias |= frameParameters.RefFrameSignBias[i] << i;
+                stdReferenceInfo.SavedOrderHints[i] = frameParameters.ref_order_hint[i];
+            }
             pReferenceSlots[referenceIndex].slotIndex = dpbSlot;
             pGopReferenceImagesIndexes[referenceIndex] = picIdx;
             referenceIndex++;
@@ -2374,9 +2374,6 @@ bool VulkanVideoParser::DecodePicture(
             av1.tileOffsets[i] = pin->slice_offsets_and_size[2 * i];
             av1.tileSizes[i] = pin->slice_offsets_and_size[2 * i + 1];
         }
-        // Hardcoded for now since sub-picture decoding is not available.
-        av1.stdPictureInfo.tg_start = 0;
-        av1.stdPictureInfo.tg_end = numTiles - 1;
 
         hdr.quantization.flags.using_qmatrix = pin->using_qmatrix;
         hdr.quantization.flags.diff_uv_delta = 0; // ??

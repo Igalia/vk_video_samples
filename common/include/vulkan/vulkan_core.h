@@ -10725,7 +10725,6 @@ typedef struct VkVideoDecodeAV1PictureInfoKHR {
     const StdVideoDecodeAV1PictureInfo*    pStdPictureInfo;
     int32_t                                referenceNameSlotIndices[VK_MAX_VIDEO_DECODE_AV1_REFERENCES_PER_FRAME_KHR];
     uint32_t                               frameHeaderOffset;
-    uint32_t                               tileGroupOffset;
     uint32_t                               tileCount;
     const uint32_t*                        pTileOffsets;
     const uint32_t*                        pTileSizes;

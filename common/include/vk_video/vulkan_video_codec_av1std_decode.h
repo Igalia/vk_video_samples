@@ -80,10 +80,8 @@ typedef struct StdVideoDecodeAV1PictureInfo {
     uint8_t                              delta_lf_res;
     uint8_t                              SkipModeFrame[2];
     uint8_t                              coded_denom;
-    uint16_t                             tg_start;
-    uint16_t                             tg_end;
+    uint8_t                              reserved1[3];
     uint8_t                              OrderHints[STD_VIDEO_AV1_NUM_REF_FRAMES];
-    uint16_t                             delta_frame_id_minus_1[STD_VIDEO_AV1_NUM_REF_FRAMES];
     uint32_t                             expectedFrameId[STD_VIDEO_AV1_NUM_REF_FRAMES];
     StdVideoAV1LoopFilter                loop_filter;
     StdVideoAV1Quantization              quantization;
@@ -98,13 +96,13 @@ typedef struct StdVideoDecodeAV1PictureInfo {
 typedef struct StdVideoDecodeAV1ReferenceInfoFlags {
     uint32_t    disable_frame_end_update_cdf : 1;
     uint32_t    segmentation_enabled : 1;
-    uint32_t    RefFrameSignBias: 1;
-    uint32_t    reserved : 29;
+    uint32_t    reserved : 30;
 } StdVideoDecodeAV1ReferenceInfoFlags;
 
 typedef struct StdVideoDecodeAV1ReferenceInfo {
     StdVideoDecodeAV1ReferenceInfoFlags    flags;
     uint8_t                                frame_type;
+    uint8_t                                RefFrameSignBias;
     uint8_t                                OrderHint;
     uint8_t                                SavedOrderHints[STD_VIDEO_AV1_NUM_REF_FRAMES];
 } StdVideoDecodeAV1ReferenceInfo;
