@@ -31,6 +31,7 @@ extern "C" {
 #define STD_VIDEO_AV1_SEG_LVL_MAX         8
 #define STD_VIDEO_AV1_PRIMARY_REF_NONE    7
 #define STD_VIDEO_AV1_SELECT_INTEGER_MV   2
+#define STD_VIDEO_AV1_SELECT_SCREEN_CONTENT_TOOLS 2
 
 typedef enum StdVideoAV1Profile {
     STD_VIDEO_AV1_PROFILE_MAIN = 0,
