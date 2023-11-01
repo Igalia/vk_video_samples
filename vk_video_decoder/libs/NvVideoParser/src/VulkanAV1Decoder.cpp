@@ -28,6 +28,10 @@
 #ifdef ENABLE_AV1_DECODER
 
 #define DEBUG_PARSER 0
+#if DEBUG_PARSER
+#include <stdio.h>
+#endif
+
 
 #include "VulkanAV1Decoder.h"
 
@@ -195,7 +199,7 @@ void VulkanAV1Decoder::AddBuffertoDispQueue(VkPicIf* pDispPic)
         ndx = (ndx + 1) % MAX_QUEUED_PTS;
     }
 }
-#include <stdio.h>
+
 // kick-off decoding
 bool VulkanAV1Decoder::end_of_picture(const uint8_t*, uint32_t dataSize, uint32_t dataOffset, uint8_t* pbSideDataIn, uint32_t sideDataSize)
 {
