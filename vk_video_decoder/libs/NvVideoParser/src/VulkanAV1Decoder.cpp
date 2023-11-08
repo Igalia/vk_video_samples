@@ -393,6 +393,16 @@ bool VulkanAV1Decoder::BeginPicture(VkParserPictureData* pnvpd)
     // NOTE(charlie): This is the thing I was talking about, and calling a "scratch space" in the Khr issues
     // Some bitstreams store something here for future reference I understand. Checkout 48delayed.ivf for one example.
     av1->ref_frame_picture[7] = m_pBuffers[7].buffer;
+    av1->refFrameParams[7].primary_ref_frame = m_pBuffers[7].primary_ref_frame; // if not 0 -- may not alloc a slot. Re-resolve this per frame per dpb index.
+    av1->refFrameParams[7].base_q_index = m_pBuffers[7].base_q_index;
+    av1->refFrameParams[7].disable_frame_end_update_cdf = m_pBuffers[7].disable_frame_end_update_cdf;
+    av1->refFrameParams[7].segmentation_enabled = m_pBuffers[7].segmentation_enabled;
+    av1->refFrameParams[7].frame_type = m_pBuffers[7].frame_type;
+    av1->refFrameParams[7].order_hint = m_pBuffers[7].order_hint;
+    for (int av1name = 0; av1name < (sizeof(av1->refFrameParams[7].ref_order_hint)); av1name += 1 ) {
+        av1->refFrameParams[7].ref_order_hint[av1name] = m_pBuffers[7].ref_order_hint[av1name];
+        av1->refFrameParams[7].RefFrameSignBias[av1name] = m_pBuffers[7].RefFrameSignBias[av1name];
+    }
 
     return true;
 }
