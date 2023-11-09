@@ -284,6 +284,7 @@ bool VulkanAV1Decoder::BeginPicture(VkParserPictureData* pnvpd)
 {
     VkParserAv1PictureData* const av1 = &pnvpd->CodecSpecific.av1;
     av1_seq_param_s *const sps = m_sps.Get();
+    DE_ASSERT(sps);
 
     av1->width = m_dwWidth;
     av1->height = m_dwHeight;
@@ -409,7 +410,7 @@ bool VulkanAV1Decoder::BeginPicture(VkParserPictureData* pnvpd)
 
 int VulkanAV1Decoder::GetRelativeDist(int a, int b)
 {
-    auto sps = m_sps;
+    auto* sps = m_sps.Get();
     if (sps->flags.enable_order_hint == false) {
         return 0;
     }
@@ -688,13 +689,13 @@ int VulkanAV1Decoder::ChooseOperatingPoint()
 
 bool VulkanAV1Decoder::ParseObuSequenceHeader()
 {
-    m_sps.Reset(nullptr); // @nocheckin: Handle multiple sequence headers correctly
     VkResult result = av1_seq_param_s::Create(0, m_sps);
+
     assert((result == VK_SUCCESS) && m_sps);
     if (result != VK_SUCCESS)
         return false;
 
-    auto sps = m_sps;
+    auto* sps = m_sps.Get();
     sps->profile = (AV1_PROFILE)u(3);
     if (sps->profile > AV1_PROFILE_2) {
         // Unsupported profile
@@ -2378,7 +2379,6 @@ void VulkanAV1Decoder::CalcTileOffsets(const uint8_t *base, const uint8_t *end, 
 bool VulkanAV1Decoder::ParseOneFrame(const uint8_t* pdatain, int32_t datasize, const VkParserBitstreamPacket* pck,
                                      int* pParsedBytes)
 {
-    m_bSPSReceived = false;
     m_bSPSChanged = false;
     uint32_t consumedBytes = 0;
     AV1ObuHeader hdr;
@@ -2430,6 +2430,7 @@ bool VulkanAV1Decoder::ParseOneFrame(const uint8_t* pdatain, int32_t datasize, c
             break;
         case AV1_OBU_SEQUENCE_HEADER:
             ParseObuSequenceHeader();
+            m_bSPSChanged = true;
             break;
         case AV1_OBU_FRAME_HEADER:
         case AV1_OBU_FRAME:

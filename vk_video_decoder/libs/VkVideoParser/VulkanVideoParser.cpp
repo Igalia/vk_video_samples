@@ -1685,8 +1685,7 @@ uint32_t VulkanVideoParser::FillDpbH265State(
 
 uint32_t VulkanVideoParser::FillDpbAV1State(
     const VkParserPictureData* pd, const VkParserAv1PictureData * pin,
-    nvVideoDecodeAV1DpbSlotInfo* pDpbSlotInfo,
-    StdVideoDecodeAV1PictureInfo* , uint32_t , // TODO: unused parameters
+	nvVideoAV1PicParameters* av1PicParams,
     VkVideoReferenceSlotInfoKHR* pReferenceSlots,
     int8_t* pGopReferenceImagesIndexes,
     int32_t* pCurrAllocatedSlotIndex)
@@ -1695,6 +1694,8 @@ uint32_t VulkanVideoParser::FillDpbAV1State(
     assert(m_maxNumDpbSlots <= STD_VIDEO_AV1_NUM_REF_FRAMES + 1);
     uint32_t refDpbUsedAndValidMask = 0;
     uint32_t referenceIndex = 0;
+
+    nvVideoDecodeAV1DpbSlotInfo* pDpbSlotInfo = &av1PicParams->dpbRefList;
 
     if (m_dumpParserData)
         std::cout << "Ref frames data: " << std::endl;
