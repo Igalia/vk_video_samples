@@ -497,7 +497,6 @@ typedef struct _GlobalMotionParams {
 typedef struct _av1_ref_frames_s
 {
     VkPicIf*                buffer;
-    VkPicIf*                fgs_buffer;
     StdVideoAV1FrameType    frame_type;
     av1_film_grain_s        film_grain_params;
     AV1WarpedMotionParams   global_models[GM_GLOBAL_MODELS_PER_FRAME];
@@ -593,9 +592,7 @@ protected:
     av1_ref_frames_s            m_pBuffers[NUM_REF_FRAMES];
 
     VkPicIf*                    m_pCurrPic;
-    VkPicIf*                    m_pFGSPic;
     
-    bool                        m_bDisableFGS;
     bool                        m_bOutputAllLayers;
     int32_t                     m_OperatingPointIDCActive;
     int                         m_numOutFrames;

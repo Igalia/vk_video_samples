@@ -485,7 +485,6 @@ typedef struct VkParserAv1PictureData {
     int32_t NumPocLtCurr; // Data is: ARRAYSIZE(pStdPictureInfo->pFrameHeader->ref_frame_idx); 
     int32_t RefPicSetLtCurr[8]; // Unpopulated, why is this needed?
 
-    VkPicIf* pDecodePic;
     uint32_t width;
     uint32_t superres_width;
     uint32_t height;
@@ -727,6 +726,7 @@ typedef struct VkParserSequenceInfo {
     uint8_t* pbSideData; // Auxiliary encryption information
     uint32_t cbSideData; // Auxiliary encryption information length
     uint32_t codecProfile;
+    bool filmGrainEnabled;
 } VkParserSequenceInfo;
 
 enum {

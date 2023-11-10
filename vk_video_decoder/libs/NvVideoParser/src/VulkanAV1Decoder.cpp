@@ -41,7 +41,6 @@ VulkanAV1Decoder::VulkanAV1Decoder(VkVideoCodecOperationFlagBitsKHR std)
 {
     memset(&m_PicData, 0, sizeof(m_PicData));
     m_pCurrPic = nullptr;
-    m_pFGSPic = nullptr;
     for (int i = 0; i < 8; i++) {
         memset(&m_pBuffers[i], 0, sizeof(m_pBuffers[0]));
     }
@@ -77,7 +76,6 @@ VulkanAV1Decoder::VulkanAV1Decoder(VkVideoCodecOperationFlagBitsKHR std)
     log2_tile_cols = 0;
     log2_tile_rows = 0;
     tile_sz_mag = 3;
-    m_bDisableFGS = false;
     m_numOutFrames = 0;
     m_bOutputAllLayers = false;
     m_OperatingPointIDCActive = 0;
@@ -111,10 +109,7 @@ void VulkanAV1Decoder::EndOfStream()
         m_pCurrPic->Release();
         m_pCurrPic = nullptr;
     }
-    if (m_pFGSPic) {
-        m_pFGSPic->Release();
-        m_pFGSPic = nullptr;
-    }
+
     for (int i = 0; i < 8; i++) {
         if (m_pBuffers[i].buffer) {
             m_pBuffers[i].buffer->Release();
@@ -254,25 +249,12 @@ bool VulkanAV1Decoder::end_of_picture(const uint8_t*, uint32_t dataSize, uint32_
     // decode_frame_wrapup
     UpdateFramePointers(m_pCurrPic);
     if (m_PicData.show_frame && !bSkipped) {
-        if (m_pFGSPic) {
-            AddBuffertoOutputQueue(m_pFGSPic, !!showable_frame);
-            m_pFGSPic = nullptr;
-            if (m_pCurrPic) {
-                m_pCurrPic->Release();
-                m_pCurrPic = nullptr;
-            }
-        } else {
-            AddBuffertoOutputQueue(m_pCurrPic, !!showable_frame);
-            m_pCurrPic = nullptr;
-        }
+        AddBuffertoOutputQueue(m_pCurrPic, !!showable_frame);
+        m_pCurrPic = nullptr;
     } else {
         if (m_pCurrPic) {
             m_pCurrPic->Release();
             m_pCurrPic = nullptr;
-        }
-        if (m_pFGSPic) {
-            m_pFGSPic->Release();
-            m_pFGSPic = nullptr;
         }
     }
 
@@ -321,9 +303,6 @@ bool VulkanAV1Decoder::BeginPicture(VkParserPictureData* pnvpd)
     // nMinNumDecodeSurfaces = dpbsize (8 for av1)  + 1
     // double the decode RT count to account film grained output if film grain present
     nvsi.nMinNumDecodeSurfaces = 9;
-    if (sps->flags.film_grain_params_present && !m_bDisableFGS) {
-        nvsi.nMinNumDecodeSurfaces = 18;
-    }
 
     nvsi.lVideoFormat = VideoFormatUnspecified;
     nvsi.lColorPrimaries = sps->color_primaries;
@@ -332,6 +311,8 @@ bool VulkanAV1Decoder::BeginPicture(VkParserPictureData* pnvpd)
 
     nvsi.pbSideData = pnvpd->pSideData;
     nvsi.cbSideData = pnvpd->sideDataLen;
+
+    nvsi.filmGrainEnabled = sps->flags.film_grain_params_present;
 
     if (!init_sequence(&nvsi)) {
         return false;
@@ -347,18 +328,9 @@ bool VulkanAV1Decoder::BeginPicture(VkParserPictureData* pnvpd)
         }
     }
 
-    if (!m_bDisableFGS && av1->enable_fgs && m_pFGSPic == nullptr) {
-        m_pClient->AllocPictureBuffer(&m_pFGSPic);
-        if (m_pFGSPic) {
-            m_pFGSPic->decodeWidth = m_dwWidth;
-            m_pFGSPic->decodeHeight = m_dwHeight;
-            m_pFGSPic->decodeSuperResWidth = m_PicData.superres_width;
-        }
-    }
-    av1->pDecodePic         = m_pCurrPic;
     pnvpd->PicWidthInMbs    = nvsi.nCodedWidth >> 4;
     pnvpd->FrameHeightInMbs = nvsi.nCodedHeight >> 4;
-    pnvpd->pCurrPic         = m_pFGSPic ? m_pFGSPic : m_pCurrPic;   // pnvpd->pCurrPic is display pic
+    pnvpd->pCurrPic         = m_pCurrPic;
     pnvpd->progressive_frame = 1;
     // QUESTION(charlie): I think this could be av1->refresh_frame_flags != 0
     // The problem is radv always needs a setup slot index.
@@ -439,13 +411,9 @@ void VulkanAV1Decoder::UpdateFramePointers(VkPicIf* currentPicture)
             if (m_pBuffers[ref_index].buffer) {
                 m_pBuffers[ref_index].buffer->Release();
             }
-            if (m_pBuffers[ref_index].fgs_buffer) {
-                m_pBuffers[ref_index].fgs_buffer->Release();
-            }
 
             m_pBuffers[ref_index].buffer = currentPicture;
             m_pBuffers[ref_index].showable_frame = showable_frame;
-            m_pBuffers[ref_index].fgs_buffer = showable_frame ? m_pFGSPic : nullptr;
 
             m_pBuffers[ref_index].frame_type = (StdVideoAV1FrameType)pic_info->frame_type;
             m_pBuffers[ref_index].order_hint = frame_offset;
@@ -483,9 +451,6 @@ void VulkanAV1Decoder::UpdateFramePointers(VkPicIf* currentPicture)
 
             if (m_pBuffers[ref_index].buffer) {
                 m_pBuffers[ref_index].buffer->AddRef();
-            }
-            if (m_pBuffers[ref_index].fgs_buffer) {
-                m_pBuffers[ref_index].fgs_buffer->AddRef();
             }
         }
         ++ref_index;
@@ -1916,7 +1881,7 @@ bool VulkanAV1Decoder::ParseObuFrameHeader()
                 refresh_frame_flags = 0;
             }
 
-            VkPicIf* pDispPic = m_pBuffers[show_existing_frame_index].fgs_buffer ? m_pBuffers[show_existing_frame_index].fgs_buffer : m_pBuffers[show_existing_frame_index].buffer;
+            VkPicIf* pDispPic = m_pBuffers[show_existing_frame_index].buffer;
             if (pDispPic)
                 pDispPic->AddRef();
             AddBuffertoOutputQueue(pDispPic, !!showable_frame);
@@ -2543,8 +2508,6 @@ bool VulkanAV1Decoder::ParseOneFrame(const uint8_t* pdatain, int32_t datasize, c
 
 bool VulkanAV1Decoder::ParseByteStream(const VkParserBitstreamPacket* pck, size_t* pParsedBytes)
 {
-    m_bDisableFGS = (pck->bPartialParsing == 0);
-
     const uint8_t* pdataStart = (pck->nDataLength > 0) ? pck->pByteStream : nullptr;
     const uint8_t* pdataEnd = (pck->nDataLength > 0) ? pck->pByteStream + pck->nDataLength : nullptr;
     int datasize = (int)pck->nDataLength;
