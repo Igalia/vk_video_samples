@@ -264,6 +264,8 @@ bool VulkanH264Decoder::BeginPicture(VkParserPictureData *pnvpd)
 
         h264->pic_parameter_set_id = slh->pic_parameter_set_id; // PPS ID
         h264->seq_parameter_set_id = sps->seq_parameter_set_id; // SPS ID
+        h264->long_term_reference_flag = slh->long_term_reference_flag;
+        h264->gaps_in_frame_num_allowed_flag = sps->flags.gaps_in_frame_num_value_allowed_flag;
 
         assert(pps->pic_parameter_set_id == h264->pic_parameter_set_id);
         assert(pps->seq_parameter_set_id == h264->seq_parameter_set_id);

@@ -153,6 +153,10 @@ typedef struct VkParserH264PictureData {
     uint8_t slice_group_map_type;
     int8_t pic_init_qs_minus26;
     uint32_t slice_group_change_rate_minus1;
+
+    uint8_t long_term_reference_flag : 1;
+    uint8_t gaps_in_frame_num_allowed_flag : 1;
+
     // DPB
     VkParserH264DpbEntry dpb[16 + 1]; // List of reference frames within the DPB
 
