@@ -141,13 +141,7 @@ bool VulkanH265Decoder::BeginPicture(VkParserPictureData *pnvpd)
     pnvpd->FrameHeightInMbs = (sps->pic_height_in_luma_samples + 0xf) >> 4;
     pnvpd->pCurrPic = cur->pPicBuf;
     pnvpd->current_dpb_id = current_dpb_id;
-    pnvpd->field_pic_flag = 0;
-    pnvpd->bottom_field_flag = 0;
-    pnvpd->second_field = 0;
-    pnvpd->progressive_frame = 1;
-    pnvpd->top_field_first = 0;
-    pnvpd->repeat_first_field = 0;
-    pnvpd->ref_pic_flag = m_slh.nal_unit_type < 16 ? m_slh.nal_unit_type & 1 : 1;
+
     pnvpd->intra_pic_flag = m_intra_pic_flag;
     pnvpd->chroma_format = sps->chroma_format_idc;
     pnvpd->picture_order_count = cur->PicOrderCntVal << 1;
@@ -174,9 +168,10 @@ bool VulkanH265Decoder::BeginPicture(VkParserPictureData *pnvpd)
     assert(hevc->vps_video_parameter_set_id == pps->sps_video_parameter_set_id);
     assert(hevc->vps_video_parameter_set_id == sps->sps_video_parameter_set_id);
 
-    hevc->IrapPicFlag = m_slh.nal_unit_type >= NUT_BLA_W_LP && m_slh.nal_unit_type <= NUT_CRA_NUT;
-    hevc->IdrPicFlag = m_slh.nal_unit_type == NUT_IDR_W_RADL || m_slh.nal_unit_type == NUT_IDR_N_LP;
-    hevc->short_term_ref_pic_set_sps_flag = m_slh.short_term_ref_pic_set_sps_flag;
+    hevc->flags.IsReference =  m_slh.nal_unit_type < 16 ? m_slh.nal_unit_type & 1 : 1;
+    hevc->flags.IrapPicFlag = m_slh.nal_unit_type >= NUT_BLA_W_LP && m_slh.nal_unit_type <= NUT_CRA_NUT;
+    hevc->flags.IdrPicFlag = m_slh.nal_unit_type == NUT_IDR_W_RADL || m_slh.nal_unit_type == NUT_IDR_N_LP;
+    hevc->flags.short_term_ref_pic_set_sps_flag = m_slh.short_term_ref_pic_set_sps_flag;
 
     // ref pic sets
     hevc->CurrPicOrderCntVal = cur->PicOrderCntVal;

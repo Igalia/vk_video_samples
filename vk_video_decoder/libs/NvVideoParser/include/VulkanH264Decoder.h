@@ -631,6 +631,7 @@ struct dpb_entry_s
     // DPB attributes
     int state; // empty (0), top (1), bottom (2), top and bottom (3) used
     VkPicIf *pPicBuf;
+    int field_pic_flag;
     bool top_needed_for_output;
     bool bottom_needed_for_output;
     bool reference_picture;

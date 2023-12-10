@@ -117,6 +117,7 @@ enum {
 typedef struct VkParserH264DpbEntry {
     VkPicIf* pPicBuf; // ptr to reference frame
     int32_t FrameIdx; // frame_num(short-term) or LongTermFrameIdx(long-term)
+    int32_t field_pic_flag : 1;
     int32_t is_long_term; // 0=short term reference, 1=long term reference
     int32_t not_existing; // non-existing reference frame (corresponding PicIdx
         // should be set to -1)
@@ -132,6 +133,9 @@ typedef struct VkParserH264PictureData {
     const StdVideoPictureParametersSet*     pStdPps;
     uint8_t  pic_parameter_set_id;          // PPS ID
     uint8_t  seq_parameter_set_id;          // SPS ID
+
+    StdVideoDecodeH264PictureInfoFlags flags;
+
     int32_t num_ref_idx_l0_active_minus1;
     int32_t num_ref_idx_l1_active_minus1;
     int32_t weighted_pred_flag;
@@ -234,9 +238,7 @@ typedef struct VkParserHevcPictureData {
     uint8_t seq_parameter_set_id;       // SPS ID
     uint8_t vps_video_parameter_set_id; // VPS ID
 
-    uint8_t IrapPicFlag;
-    uint8_t IdrPicFlag;
-    uint8_t short_term_ref_pic_set_sps_flag;
+    StdVideoDecodeH265PictureInfoFlags flags;
 
     // RefPicSets
     int32_t NumBitsForShortTermRPSInSlice;
@@ -525,9 +527,7 @@ typedef struct VkParserPictureData {
     int32_t second_field; // Second field of a complementary field pair
     int32_t progressive_frame; // Frame is progressive
     int32_t top_field_first; // Frame pictures only
-    int32_t repeat_first_field; // For 3:2 pulldown (number of additional fields,
-        // 2=frame doubling, 4=frame tripling)
-    int32_t ref_pic_flag; // Frame is a reference frame
+    int32_t repeat_first_field; // For 3:2 pulldown (number of additional fields, 2=frame doubling, 4=frame tripling)
     int32_t intra_pic_flag; // Frame is entirely intra coded (no temporal
         // dependencies)
     int32_t chroma_format; // Chroma Format (should match sequence info)

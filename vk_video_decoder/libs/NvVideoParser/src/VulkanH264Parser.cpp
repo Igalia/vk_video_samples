@@ -217,49 +217,17 @@ bool VulkanH264Decoder::BeginPicture(VkParserPictureData *pnvpd)
         pnvpd->PicWidthInMbs = sps->pic_width_in_mbs_minus1 + 1;
         pnvpd->FrameHeightInMbs = (2 - sps->flags.frame_mbs_only_flag) * (sps->pic_height_in_map_units_minus1 + 1);
         pnvpd->pCurrPic = dpb[iCur].pPicBuf;
-        pnvpd->current_dpb_id = iCur;
-        pnvpd->field_pic_flag = slh->field_pic_flag;
-        pnvpd->bottom_field_flag = slh->bottom_field_flag;
-        pnvpd->second_field = (slh->field_pic_flag) && (dpb[iCur].complementary_field_pair);
-        if (slh->field_pic_flag)
-            pnvpd->top_field_first = (pnvpd->second_field == pnvpd->bottom_field_flag);
-        else
-            pnvpd->top_field_first = (dpb[iCur].TopFieldOrderCnt < dpb[iCur].BottomFieldOrderCnt);
-        pnvpd->progressive_frame = (!slh->field_pic_flag) && (dpb[iCur].TopFieldOrderCnt == dpb[iCur].BottomFieldOrderCnt);
-        pnvpd->ref_pic_flag = (slh->nal_ref_idc != 0);
-        pnvpd->intra_pic_flag = m_intra_pic_flag;
-        pnvpd->repeat_first_field = 0;
-        pnvpd->picture_order_count = dpb[iCur].PicOrderCnt;
-        if (!slh->field_pic_flag)
-        {
-            // Hack for x264 mbaff bug: delta_pic_order_cnt_bottom unspecified for interlaced content
-            if ((!sps->flags.frame_mbs_only_flag) && (sps->flags.mb_adaptive_frame_field_flag)
-             && (sps->pic_order_cnt_type == 0) && (!pps->flags.bottom_field_pic_order_in_frame_present_flag)
-             && (pnvpd->progressive_frame))
-            {
-                pnvpd->progressive_frame = 0;
-                pnvpd->top_field_first = 1;
-            }
-            // Use pic_struct to override field order
-            if ((slh->sei_pic_struct >= 3) && (slh->sei_pic_struct <= 6))
-            {
-                pnvpd->top_field_first = slh->sei_pic_struct & 1;
-            }
-            // Use SEI to determine the number of fields
-            switch(slh->sei_pic_struct) // Table D-1
-            {
-            case 5:
-            case 6:
-                pnvpd->repeat_first_field = 1;
-                break;
-            case 7:
-                pnvpd->repeat_first_field = 2;  // frame doubling
-                break;
-            case 8:
-                pnvpd->repeat_first_field = 4;  // frame tripling
-                break;
-            }
-        }
+		pnvpd->current_dpb_id = iCur;
+
+		h264->flags.field_pic_flag = slh->field_pic_flag;
+		h264->flags.is_intra = m_intra_pic_flag;
+		h264->flags.IdrPicFlag = slh->IdrPicFlag;
+		h264->flags.bottom_field_flag = slh->bottom_field_flag;
+		h264->flags.is_reference = (slh->nal_ref_idc != 0);
+		h264->flags.complementary_field_pair = cur->complementary_field_pair;
+
+		pnvpd->intra_pic_flag = m_intra_pic_flag;
+		pnvpd->picture_order_count = dpb[iCur].PicOrderCnt;
         pnvpd->chroma_format = sps->chroma_format_idc;
 
         h264->pic_parameter_set_id = slh->pic_parameter_set_id; // PPS ID
@@ -281,7 +249,9 @@ bool VulkanH264Decoder::BeginPicture(VkParserPictureData *pnvpd)
             // slice_group_map_s is not ssupported with this version of the parser
             cur->not_existing = true;
         }
+
         // DPB
+        cur->field_pic_flag = slh->field_pic_flag;
         h264->frame_num = dpb[iCur].FrameNum;
         h264->CurrFieldOrderCnt[0] = dpb[iCur].TopFieldOrderCnt;
         h264->CurrFieldOrderCnt[1] = dpb[iCur].BottomFieldOrderCnt;
@@ -345,6 +315,7 @@ bool VulkanH264Decoder::BeginPicture(VkParserPictureData *pnvpd)
                 h264->dpb[i].used_for_reference = ((dpb[i].bottom_field_marking != 0) << 1) | (dpb[i].top_field_marking != 0);
                 if (dpb[i].inter_view_flag && dpb[i].view_id != m_nhe.mvc.view_id)
                     h264->dpb[i].used_for_reference |= 3;
+                h264->dpb[i].field_pic_flag = dpb[i].field_pic_flag;
                 h264->dpb[i].is_long_term = dpb[i].top_field_marking == 2 || dpb[i].bottom_field_marking == 2;
                 h264->dpb[i].not_existing = dpb[i].not_existing;
                 h264->dpb[i].FrameIdx = h264->dpb[i].is_long_term ? dpb[i].LongTermFrameIdx : dpb[i].FrameNum;
@@ -625,48 +596,45 @@ bool VulkanH264Decoder::BeginPicture_SVC(VkParserPictureData *pnvpd)
         (pnvpd + PicLayer)->FrameHeightInMbs = (2 - sps->flags.frame_mbs_only_flag) * (sps->pic_height_in_map_units_minus1 + 1);
         (pnvpd + PicLayer)->pCurrPic = (slh->store_ref_base_pic_flag && (layer != m_iDQIdMax) && (layer == (m_iDQIdMax & ~15)))
                                      ? dpb_entry[16].pPicBufRefBase : dpb_entry[16].pPicBuf;
-        (pnvpd + PicLayer)->field_pic_flag = slh->field_pic_flag;
-        (pnvpd + PicLayer)->bottom_field_flag = slh->bottom_field_flag;
-        (pnvpd + PicLayer)->second_field = (slh->field_pic_flag) && (dpb_entry[16].complementary_field_pair);
-        if (slh->field_pic_flag)
-            (pnvpd + PicLayer)->top_field_first = ((pnvpd + layer)->second_field == (pnvpd + PicLayer)->bottom_field_flag);
-        else
-            (pnvpd + PicLayer)->top_field_first = (dpb_entry[16].TopFieldOrderCnt < dpb_entry[16].BottomFieldOrderCnt);
-        (pnvpd + PicLayer)->progressive_frame = (!slh->field_pic_flag) && (dpb_entry[16].TopFieldOrderCnt == dpb_entry[16].BottomFieldOrderCnt);
-        (pnvpd + PicLayer)->ref_pic_flag = (slh->nal_ref_idc != 0);
+
+        h264->flags.field_pic_flag = slh->field_pic_flag;
+        h264->flags.is_intra = m_intra_pic_flag;
+        h264->flags.IdrPicFlag = slh->IdrPicFlag;
+        h264->flags.bottom_field_flag = slh->bottom_field_flag;
+        h264->flags.is_reference = (slh->nal_ref_idc != 0);
+        h264->flags.complementary_field_pair = cur->complementary_field_pair;
         (pnvpd + PicLayer)->intra_pic_flag =  m_intra_pic_flag;
-        (pnvpd + PicLayer)->repeat_first_field = 0;
         (pnvpd + PicLayer)->picture_order_count = dpb_entry[16].PicOrderCnt;
-        if (!slh->field_pic_flag)
-        {
-            // Hack for x264 mbaff bug: delta_pic_order_cnt_bottom unspecified for interlaced content
-            if ((!sps->flags.frame_mbs_only_flag) && (sps->flags.mb_adaptive_frame_field_flag)
-            && (sps->pic_order_cnt_type == 0) && (!pps->flags.bottom_field_pic_order_in_frame_present_flag)
-            && ((pnvpd + PicLayer)->progressive_frame))
-            {
-                (pnvpd + PicLayer)->progressive_frame = 0;
-                (pnvpd + PicLayer)->top_field_first = 1;
-            }
-            // Use pic_struct to override field order
-            if ((slh->sei_pic_struct >= 3) && (slh->sei_pic_struct <= 6))
-            {
-                (pnvpd + PicLayer)->top_field_first = slh->sei_pic_struct & 1;
-            }
-            // Use SEI to determine the number of fields
-            switch(slh->sei_pic_struct) // Table D-1
-            {
-            case 5:
-            case 6:
-                (pnvpd + PicLayer)->repeat_first_field = 1;
-                break;
-            case 7:
-                (pnvpd + PicLayer)->repeat_first_field = 2;  // frame doubling
-                break;
-            case 8:
-                (pnvpd + PicLayer)->repeat_first_field = 4;  // frame tripling
-                break;
-            }
-        }
+        // if (!slh->field_pic_flag)
+        // {
+        //     // Hack for x264 mbaff bug: delta_pic_order_cnt_bottom unspecified for interlaced content
+        //     if ((!sps->flags.frame_mbs_only_flag) && (sps->flags.mb_adaptive_frame_field_flag)
+        //     && (sps->pic_order_cnt_type == 0) && (!pps->flags.bottom_field_pic_order_in_frame_present_flag)
+        //     && ((pnvpd + PicLayer)->progressive_frame))
+        //     {
+        //         (pnvpd + PicLayer)->progressive_frame = 0;
+        //         (pnvpd + PicLayer)->top_field_first = 1;
+        //     }
+        //     // Use pic_struct to override field order
+        //     if ((slh->sei_pic_struct >= 3) && (slh->sei_pic_struct <= 6))
+        //     {
+        //         (pnvpd + PicLayer)->top_field_first = slh->sei_pic_struct & 1;
+        //     }
+        //     // Use SEI to determine the number of fields
+        //     switch(slh->sei_pic_struct) // Table D-1
+        //     {
+        //     case 5:
+        //     case 6:
+        //         (pnvpd + PicLayer)->repeat_first_field = 1;
+        //         break;
+        //     case 7:
+        //         (pnvpd + PicLayer)->repeat_first_field = 2;  // frame doubling
+        //         break;
+        //     case 8:
+        //         (pnvpd + PicLayer)->repeat_first_field = 4;  // frame tripling
+        //         break;
+        //     }
+        // }
         (pnvpd + PicLayer)->chroma_format = sps->chroma_format_idc;
 
         // SPS
