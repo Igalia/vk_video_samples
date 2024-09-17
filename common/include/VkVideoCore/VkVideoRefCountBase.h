@@ -38,7 +38,7 @@ public:
     virtual int32_t GetRefCount() { assert(!"Must Implement"); return INVALID_REF_COUNT_VALUE; }
 
 protected:
-    ~VkVideoRefCountBase() = default;
+    virtual ~VkVideoRefCountBase() { }
 };
 
 template<class VkBaseObjType>
