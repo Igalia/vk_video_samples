@@ -354,8 +354,8 @@ struct VkParserAv1PictureData {
 	StdVideoAV1LoopRestoration		loopRestoration;
 	StdVideoAV1GlobalMotion			globalMotion;
 	StdVideoAV1FilmGrain			filmGrain;
-	uint32_t						tileOffsets[64]; // TODO: Hack until the interfaces get cleaned up (all the cached parameters should be ref-counted etc, AV1_MAX_COLS*AV1_MAX_ROWS is larger than 64, switch to dynamic structure. Cheat while the CTS uses simpler bitstreams)
-	uint32_t						tileSizes[64];
+	uint32_t						tileOffsets[256]; // TODO: Hack until the interfaces get cleaned up (all the cached parameters should be ref-counted etc, AV1_MAX_COLS*AV1_MAX_ROWS is larger than 256, switch to dynamic structure. Cheat while the CTS uses simpler bitstreams)
+	uint32_t						tileSizes[256];
 	// --- End of pKHR data ---
 
     const StdVideoPictureParametersSet*     pStdSps;

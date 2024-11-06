@@ -2271,6 +2271,7 @@ bool VulkanAV1Decoder::ParseObuTileGroup(const AV1ObuHeader& hdr)
 
         m_PicData.tileSizes[m_PicData.khr_info.tileCount] = tileSize;
         m_PicData.khr_info.tileCount++;
+        assert(m_PicData.khr_info.tileCount < 256);  // m_PicData.tileOffsets and tileSizes maximum size is 256.
     }
 
     return (tg_end == num_tiles - 1);
