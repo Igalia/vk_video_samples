@@ -18128,6 +18128,53 @@ VKAPI_ATTR void VKAPI_CALL vkCmdDrawMeshTasksIndirectCountEXT(
     uint32_t                                    stride);
 #endif
 
+#define VK_KHR_video_decode_vp9 1
+#include "vk_video/vulkan_video_codec_vp9std.h"
+#include "vk_video/vulkan_video_codec_vp9std_decode.h"
+#define VK_KHR_VIDEO_DECODE_VP9_SPEC_VERSION                         1
+#define VK_KHR_VIDEO_DECODE_VP9_EXTENSION_NAME                       "VK_KHR_video_decode_vp9"
+#define VK_MAX_VIDEO_VP9_REFERENCES_PER_FRAME_KHR                    3
+#define VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VIDEO_DECODE_VP9_FEATURES_KHR ((VkStructureType)1000514000)
+#define VK_STRUCTURE_TYPE_VIDEO_DECODE_VP9_CAPABILITIES_KHR          ((VkStructureType)1000514001)
+#define VK_STRUCTURE_TYPE_VIDEO_DECODE_VP9_PICTURE_INFO_KHR          ((VkStructureType)1000514002)
+#define VK_STRUCTURE_TYPE_VIDEO_DECODE_VP9_PROFILE_INFO_KHR          ((VkStructureType)1000514003)
+#define VK_STRUCTURE_TYPE_VIDEO_DECODE_VP9_DPB_SLOT_INFO_KHR         ((VkStructureType)1000514004)
+#define VK_VIDEO_CODEC_OPERATION_DECODE_VP9_BIT_KHR                  ((VkVideoCodecOperationFlagBitsKHR)0x00000008)
+
+typedef struct VkPhysicalDeviceVideoDecodeVP9FeaturesKHR {
+    VkStructureType                       sType;
+    void*                                 pNext;
+    VkBool32                              videoDecodeVP9;
+} VkPhysicalDeviceVideoDecodeVP9FeaturesKHR;
+
+typedef struct VkVideoDecodeVP9ProfileInfoKHR {
+    VkStructureType                       sType;
+    void const*                           pNext;
+    StdVideoVP9Profile                    stdProfile;
+} VkVideoDecodeVP9ProfileInfoKHR;
+
+typedef struct VkVideoDecodeVP9CapabilitiesKHR {
+    VkStructureType                       sType;
+    void*                                 pNext;
+    StdVideoVP9Level                      maxLevel;
+} VkVideoDecodeVP9CapabilitiesKHR;
+
+typedef struct VkVideoDecodeVP9PictureInfoKHR {
+    VkStructureType                       sType;
+    void const*                           pNext;
+    StdVideoDecodeVP9PictureInfo const*   pStdPictureInfo;
+    int32_t                               referenceNameSlotIndices[VK_MAX_VIDEO_VP9_REFERENCES_PER_FRAME_KHR];
+    uint32_t                              uncompressedHeaderOffset;
+    uint32_t                              compressedHeaderOffset;
+    uint32_t                              tilesOffset;
+} VkVideoDecodeVP9PictureInfoKHR;
+
+typedef struct VkVideoDecodeVP9DpbSlotInfoKHR {
+    VkStructureType                       sType;
+    void const*                           pNext;
+    StdVideoDecodeVP9ReferenceInfo const* pStdReferenceInfo;
+} VkVideoDecodeVP9DpbSlotInfoKHR;
+
 #ifdef __cplusplus
 }
 #endif
