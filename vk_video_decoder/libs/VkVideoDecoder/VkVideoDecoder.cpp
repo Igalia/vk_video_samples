@@ -39,12 +39,8 @@ const char* VkVideoDecoder::GetVideoCodecString(VkVideoCodecOperationFlagBitsKHR
         { VK_VIDEO_CODEC_OPERATION_NONE_KHR, "None" },
         { VK_VIDEO_CODEC_OPERATION_DECODE_H264_BIT_KHR, "AVC/H.264" },
         { VK_VIDEO_CODEC_OPERATION_DECODE_H265_BIT_KHR, "H.265/HEVC" },
-#ifdef VK_EXT_video_decode_vp9
         { VK_VIDEO_CODEC_OPERATION_DECODE_VP9_BIT_KHR, "VP9" },
-#endif // VK_EXT_video_decode_vp9
-#ifdef vulkan_video_codec_av1std
         { VK_VIDEO_CODEC_OPERATION_DECODE_AV1_BIT_KHR, "AV1" },
-#endif // VK_EXT_video_decode_av1
     };
 
     for (unsigned i = 0; i < sizeof(aCodecName) / sizeof(aCodecName[0]); i++) {
@@ -122,9 +118,8 @@ int32_t VkVideoDecoder::StartVideoSequence(VkParserDetectedVideoFormat* pVideoFo
             VK_QUEUE_VIDEO_DECODE_BIT_KHR,
             VK_VIDEO_CODEC_OPERATION_DECODE_H264_BIT_KHR
             | VK_VIDEO_CODEC_OPERATION_DECODE_H265_BIT_KHR
-#ifdef ENABLE_AV1_DECODER
             | VK_VIDEO_CODEC_OPERATION_DECODE_AV1_BIT_KHR
-#endif
+            | VK_VIDEO_CODEC_OPERATION_DECODE_VP9_BIT_KHR
     );
     assert(videoCodecs != VK_VIDEO_CODEC_OPERATION_NONE_KHR);
 
@@ -598,15 +593,15 @@ int VkVideoDecoder::DecodePictureWithParameters(VkParserPerFrameDecodeParameters
     if (pCurrFrameDecParams->isAV1) {
         // AV1 always keeps a setup slot active.
         //pCurrFrameDecParams->decodeFrameInfo.referenceSlotCount--;
-    }    
+    }
     decodeBeginInfo.pReferenceSlots = pCurrFrameDecParams->decodeFrameInfo.pReferenceSlots;
-    
+
     if (false) {
         for (unsigned i = 0; i < pCurrFrameDecParams->decodeFrameInfo.referenceSlotCount; i++) {
             printf("pCurrFrameDecParams->decodeFrameInfo.pReferenceSlots[%d].slotIndex = %d (%p)\n", i, pCurrFrameDecParams->decodeFrameInfo.pReferenceSlots[i].slotIndex, pCurrFrameDecParams->decodeFrameInfo.pReferenceSlots[i].pPictureResource->imageViewBinding);
         }
     }
-    
+
     if (pDecodePictureInfo->flags.unpairedField) {
         // assert(pFrameSyncinfo->frameCompleteSemaphore == VkSemaphore());
         pDecodePictureInfo->flags.syncFirstReady = true;
@@ -618,16 +613,34 @@ int VkVideoDecoder::DecodePictureWithParameters(VkParserPerFrameDecodeParameters
     frameSynchronizationInfo.hasFrameCompleteSignalFence = true;
     frameSynchronizationInfo.hasFrameCompleteSignalSemaphore = true;
 
-    if (pCurrFrameDecParams->useInlinedPictureParameters == false) {
-        if (m_videoFormat.codec == VK_VIDEO_CODEC_OPERATION_DECODE_H264_BIT_KHR || m_videoFormat.codec == VK_VIDEO_CODEC_OPERATION_DECODE_H265_BIT_KHR) {
-            // out of band parameters
-            VkSharedBaseObj<VkVideoRefCountBase> currentVkPictureParameters;
-            bool valid = pCurrFrameDecParams->pStdPps->GetClientObject(currentVkPictureParameters);
-            assert(currentVkPictureParameters && valid);
-            if (!(currentVkPictureParameters && valid)) {
-                return -1;
-            }
-            VkParserVideoPictureParameters* pOwnerPictureParameters =
+    VkSharedBaseObj<VkVideoRefCountBase> currentVkPictureParameters;
+    if (m_videoFormat.codec == VK_VIDEO_CODEC_OPERATION_DECODE_VP9_BIT_KHR) {
+        decodeBeginInfo.videoSessionParameters = VK_NULL_HANDLE;
+    } else if (m_videoFormat.codec == VK_VIDEO_CODEC_OPERATION_DECODE_AV1_BIT_KHR) { // AV1
+
+        bool valid = pCurrFrameDecParams->pStdSps->GetClientObject(currentVkPictureParameters);
+        assert(valid);
+        VkParserVideoPictureParameters* pOwnerPictureParameters =
+            VkParserVideoPictureParameters::VideoPictureParametersFromBase(currentVkPictureParameters);
+
+        assert(pOwnerPictureParameters);
+        assert(pOwnerPictureParameters->GetId() <= m_currentPictureParameters->GetId());
+        int32_t ret = pOwnerPictureParameters->FlushPictureParametersQueue(m_videoSession);
+        assert(ret >= 0);
+        if (!(ret >= 0)) {
+            return -1;
+        }
+
+        decodeBeginInfo.videoSessionParameters = *pOwnerPictureParameters;
+
+    } else if (pCurrFrameDecParams->useInlinedPictureParameters == false) {
+        // out of band parameters
+        bool valid = pCurrFrameDecParams->pStdPps->GetClientObject(currentVkPictureParameters);
+        assert(currentVkPictureParameters && valid);
+        if (!(currentVkPictureParameters && valid)) {
+            return -1;
+        }
+        VkParserVideoPictureParameters* pOwnerPictureParameters =
                 VkParserVideoPictureParameters::VideoPictureParametersFromBase(currentVkPictureParameters);
             assert(pOwnerPictureParameters);
             assert(pOwnerPictureParameters->GetId() <= m_currentPictureParameters->GetId());
