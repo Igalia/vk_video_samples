@@ -2,7 +2,7 @@
 #define VULKAN_VIDEO_CODEC_VP9STD_DECODE_H_ 1
 
 /*
-** Copyright 2015-2024 The Khronos Group Inc.
+** Copyright 2015-2025 The Khronos Group Inc.
 **
 ** SPDX-License-Identifier: Apache-2.0
 */
@@ -50,7 +50,7 @@ typedef struct StdVideoDecodeVP9PictureInfo {
     uint8_t                              frame_context_idx;
     uint8_t                              reset_frame_context;
     uint8_t                              refresh_frame_flags;
-    uint8_t                              reserved1;
+    uint8_t                              ref_frame_sign_bias_mask;
     StdVideoVP9InterpolationFilter       interpolation_filter;
     uint8_t                              base_q_idx;
     int8_t                               delta_q_y_dc;
@@ -58,20 +58,17 @@ typedef struct StdVideoDecodeVP9PictureInfo {
     int8_t                               delta_q_uv_ac;
     uint8_t                              tile_cols_log2;
     uint8_t                              tile_rows_log2;
-    uint8_t                              ref_frame_sign_bias;
-    uint8_t                              reserved2;
+    uint16_t                             reserved2;
     const StdVideoVP9LoopFilter*         pLoopFilter;
     const StdVideoVP9Segmentation*       pSegmentation;
 } StdVideoDecodeVP9PictureInfo;
 
 typedef struct StdVideoDecodeVP9ReferenceInfoFlags {
-    uint32_t    segmentation_enabled : 1;
-    uint32_t    reserved : 31;
+    uint32_t    reserved : 32;
 } StdVideoDecodeVP9ReferenceInfoFlags;
 
 typedef struct StdVideoDecodeVP9ReferenceInfo {
     StdVideoDecodeVP9ReferenceInfoFlags    flags;
-    StdVideoVP9FrameType                   frame_type;
 } StdVideoDecodeVP9ReferenceInfo;
 
 
