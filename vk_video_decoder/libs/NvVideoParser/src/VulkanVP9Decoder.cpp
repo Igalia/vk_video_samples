@@ -421,7 +421,7 @@ bool VulkanVP9Decoder::ParseUncompressedHeader()
 
             for (int i = 0; i < STD_VIDEO_VP9_REFS_PER_FRAME; i++) {
                 pPicData->ref_frame_idx[i] = u(3);
-                pStdPicInfo->ref_frame_sign_bias = (u(1) << i);
+                pStdPicInfo->ref_frame_sign_bias_mask = (u(1) << i);
             }
             m_pLastRef = m_pBuffers[pPicData->ref_frame_idx[0]].buffer;
             m_pGoldenRef = m_pBuffers[pPicData->ref_frame_idx[1]].buffer;
@@ -853,11 +853,11 @@ bool VulkanVP9Decoder::BeginPicture(VkParserPictureData* pnvpd)
     pnvpd->intra_pic_flag = pPicDataVP9->FrameIsIntra;
     pnvpd->chroma_format = pPicDataVP9->ChromaFormat;
 
+    m_pCurrPic->decodeWidth = width;
+    m_pCurrPic->decodeHeight = height;
+
     // Reference slots information
     for (int i = 0; i < STD_VIDEO_VP9_NUM_REF_FRAMES; i++) {
-        pPicDataVP9->stdReferenceInfo[i].frame_type = m_pBuffers[i].frame_type;
-        pPicDataVP9->stdReferenceInfo[i].flags.segmentation_enabled = m_pBuffers[i].segmentation_enabled;
-
         vkPicBuffBase* pb = reinterpret_cast<vkPicBuffBase*>(m_pBuffers[i].buffer);
         pPicDataVP9->pic_idx[i] = pb ? pb->m_picIdx : -1;
     }
