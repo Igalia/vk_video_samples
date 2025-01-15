@@ -204,6 +204,7 @@ struct nvVideoDecodeVP9DpbSlotInfo
 
 struct nvVideoVP9PicParameters {
     StdVideoDecodeVP9PictureInfo stdPictureInfo;
+    StdVideoVP9ColorConfig stdColorConfig;
     StdVideoVP9Segmentation stdSegment;
     StdVideoVP9LoopFilter stdLoopFilter;
     VkVideoDecodeVP9PictureInfoKHR vkPictureInfo{ VK_STRUCTURE_TYPE_VIDEO_DECODE_VP9_PICTURE_INFO_KHR, nullptr, &stdPictureInfo };
@@ -2572,6 +2573,8 @@ bool VulkanVideoParser::DecodePicture(
 
         // Copy std data and link pointers
         memcpy(pStdPicInfo, &pin->stdPictureInfo, sizeof(StdVideoDecodeVP9PictureInfo));
+        memcpy(&vp9.stdColorConfig, &pin->stdColorConfig, sizeof(StdVideoVP9ColorConfig));
+        pStdPicInfo->pColorConfig = &vp9.stdColorConfig;
         if (pStdPicInfo->flags.segmentation_enabled == 1) {
             memcpy(&vp9.stdSegment, &pin->stdSegmentation, sizeof(StdVideoVP9Segmentation));
             pStdPicInfo->pSegmentation = &vp9.stdSegment;
