@@ -355,6 +355,7 @@ bool VulkanVP9Decoder::ParseUncompressedHeader()
 {
     VkParserVp9PictureData *pPicData = &m_PicData;
     StdVideoDecodeVP9PictureInfo* pStdPicInfo = &m_PicData.stdPictureInfo;
+    StdVideoVP9ColorConfig* pStdColorConfig = &m_PicData.stdColorConfig;
     StdVideoVP9LoopFilter* pStdLoopFilter = &m_PicData.stdLoopFilter;
     m_frameSizeChanged = false;
 
@@ -407,9 +408,9 @@ bool VulkanVP9Decoder::ParseUncompressedHeader()
             if (pStdPicInfo->profile > STD_VIDEO_VP9_PROFILE_0) {
                 ParseColorConfig();
             } else {
-                pStdPicInfo->color_space = STD_VIDEO_VP9_COLOR_SPACE_BT_601;
-                pStdPicInfo->flags.subsampling_x = 1;
-                pStdPicInfo->flags.subsampling_y = 1;
+                pStdColorConfig->color_space = STD_VIDEO_VP9_COLOR_SPACE_BT_601;
+                pStdColorConfig->subsampling_x = 1;
+                pStdColorConfig->subsampling_y = 1;
                 pPicData->BitDepth = 8;
             }
 
@@ -478,7 +479,7 @@ bool VulkanVP9Decoder::ParseUncompressedHeader()
     pPicData->compressedHeaderOffset = (consumed_bits() + 7) >> 3;
     pPicData->tilesOffset = pPicData->compressedHeaderOffset + pPicData->compressedHeaderSize;
 
-    pPicData->ChromaFormat = (pStdPicInfo->flags.subsampling_x == 1) && (pStdPicInfo->flags.subsampling_y == 1) ? 1 : 0;
+    pPicData->ChromaFormat = (pStdColorConfig->subsampling_x == 1) && (pStdColorConfig->subsampling_y == 1) ? 1 : 0;
     assert(pPicData->ChromaFormat); // TODO: support only YUV420
 
     return true;
@@ -488,6 +489,7 @@ bool VulkanVP9Decoder::ParseColorConfig()
 {
     VkParserVp9PictureData* pPicData = &m_PicData;
     StdVideoDecodeVP9PictureInfo* pStdPicInfo = &m_PicData.stdPictureInfo;
+    StdVideoVP9ColorConfig* pStdColorConfig = &m_PicData.stdColorConfig;
 
     if (pStdPicInfo->profile >= STD_VIDEO_VP9_PROFILE_2) {
         pPicData->BitDepth = u(1) ? 12 : 10;
@@ -495,25 +497,25 @@ bool VulkanVP9Decoder::ParseColorConfig()
         pPicData->BitDepth = 8;
     }
 
-    pStdPicInfo->color_space = (StdVideoVP9ColorSpace)u(3);
+    pStdColorConfig->color_space = (StdVideoVP9ColorSpace)u(3);
 
-    if (pStdPicInfo->color_space != STD_VIDEO_VP9_COLOR_SPACE_RGB) {
-        pStdPicInfo->flags.color_range = u(1);
+    if (pStdColorConfig->color_space != STD_VIDEO_VP9_COLOR_SPACE_RGB) {
+        pStdColorConfig->flags.color_range = u(1);
         if ((pStdPicInfo->profile == STD_VIDEO_VP9_PROFILE_1) ||
             (pStdPicInfo->profile == STD_VIDEO_VP9_PROFILE_3)) {
-            pStdPicInfo->flags.subsampling_x = u(1);
-            pStdPicInfo->flags.subsampling_y = u(1);
+            pStdColorConfig->subsampling_x = u(1);
+            pStdColorConfig->subsampling_y = u(1);
             VP9_CHECK_ZERO_BIT
         } else {
-            pStdPicInfo->flags.subsampling_x = 1;
-            pStdPicInfo->flags.subsampling_y = 1;
+            pStdColorConfig->subsampling_x = 1;
+            pStdColorConfig->subsampling_y = 1;
         }
     } else {
-        pStdPicInfo->flags.color_range = 1;
+        pStdColorConfig->flags.color_range = 1;
         if ((pStdPicInfo->profile == STD_VIDEO_VP9_PROFILE_1) ||
             (pStdPicInfo->profile == STD_VIDEO_VP9_PROFILE_3)) {
-            pStdPicInfo->flags.subsampling_x = 0;
-            pStdPicInfo->flags.subsampling_y = 0;
+            pStdColorConfig->subsampling_x = 0;
+            pStdColorConfig->subsampling_y = 0;
             VP9_CHECK_ZERO_BIT
         }
     }

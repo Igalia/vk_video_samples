@@ -97,6 +97,20 @@ typedef enum StdVideoVP9ColorSpace {
     STD_VIDEO_VP9_COLOR_SPACE_INVALID = 0x7FFFFFFF,
     STD_VIDEO_VP9_COLOR_SPACE_MAX_ENUM = 0x7FFFFFFF
 } StdVideoVP9ColorSpace;
+typedef struct StdVideoVP9ColorConfigFlags {
+    uint32_t    color_range : 1;
+    uint32_t    reserved : 31;
+} StdVideoVP9ColorConfigFlags;
+
+typedef struct StdVideoVP9ColorConfig {
+    StdVideoVP9ColorConfigFlags    flags;
+    uint8_t                        BitDepth;
+    uint8_t                        subsampling_x;
+    uint8_t                        subsampling_y;
+    uint8_t                        reserved1;
+    StdVideoVP9ColorSpace          color_space;
+} StdVideoVP9ColorConfig;
+
 typedef struct StdVideoVP9LoopFilterFlags {
     uint32_t    loop_filter_delta_enabled : 1;
     uint32_t    loop_filter_delta_update : 1;
@@ -125,7 +139,7 @@ typedef struct StdVideoVP9Segmentation {
     StdVideoVP9SegmentationFlags    flags;
     uint8_t                         segmentation_tree_probs[STD_VIDEO_VP9_MAX_SEGMENTATION_TREE_PROBS];
     uint8_t                         segmentation_pred_prob[STD_VIDEO_VP9_MAX_SEGMENTATION_PRED_PROB];
-    int16_t                         FeatureEnabled[STD_VIDEO_VP9_MAX_SEGMENTS];
+    uint8_t                         FeatureEnabled[STD_VIDEO_VP9_MAX_SEGMENTS];
     int16_t                         FeatureData[STD_VIDEO_VP9_MAX_SEGMENTS][STD_VIDEO_VP9_SEG_LVL_MAX];
 } StdVideoVP9Segmentation;
 

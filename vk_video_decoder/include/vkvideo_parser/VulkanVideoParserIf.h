@@ -323,6 +323,7 @@ struct VkParserAv1PictureData {
 typedef struct VkParserVp9PictureData {
     
     StdVideoDecodeVP9PictureInfo stdPictureInfo;
+    StdVideoVP9ColorConfig       stdColorConfig;
     StdVideoVP9LoopFilter        stdLoopFilter;
     StdVideoVP9Segmentation      stdSegmentation;
     StdVideoDecodeVP9ReferenceInfo  stdReferenceInfo[STD_VIDEO_VP9_NUM_REF_FRAMES];
