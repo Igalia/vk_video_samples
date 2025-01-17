@@ -1928,7 +1928,7 @@ uint32_t VulkanVideoParser::FillDpbVP9State(
         printf("\n");
     }
 
-    bool isKeyFrame = (pin->stdPictureInfo.frame_type == STD_VIDEO_AV1_FRAME_TYPE_KEY);
+    bool isKeyFrame = (pin->stdPictureInfo.frame_type == STD_VIDEO_VP9_FRAME_TYPE_KEY);
 
     // It doesn't look like this tracking is needed.
     int8_t activeReferences[32];
@@ -2624,8 +2624,8 @@ bool VulkanVideoParser::DecodePicture(
         //pDecodePictureInfo->videoFrameType = static_cast<uint16_t>(pin->frame_type);
         pDecodePictureInfo->viewId = 0; // @review: Doesn't seem to be used in Vulkan?
 
-        bool isKeyFrame = pin->stdPictureInfo.frame_type == STD_VIDEO_AV1_FRAME_TYPE_KEY;
-        for (size_t i = 0; i < STD_VIDEO_AV1_REFS_PER_FRAME; i++) {
+        bool isKeyFrame = pin->stdPictureInfo.frame_type == STD_VIDEO_VP9_FRAME_TYPE_KEY;
+        for (size_t i = 0; i < STD_VIDEO_VP9_REFS_PER_FRAME; i++) {
             int8_t picIdx = isKeyFrame ? -1 : pin->pic_idx[pin->ref_frame_idx[i]];
             if (picIdx < 0) {
                 pVkPicInfo->referenceNameSlotIndices[i] = -1;
