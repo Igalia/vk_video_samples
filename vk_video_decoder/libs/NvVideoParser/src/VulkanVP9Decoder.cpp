@@ -136,7 +136,7 @@ bool VulkanVP9Decoder::ParseByteStream(const VkParserBitstreamPacket* pck, size_
 
             const uint8_t* data_start = m_bitstreamData.GetBitstreamPtr();
             const uint8_t* data_end = data_start + m_frameSize;
-            int32_t data_size = m_frameSize;
+            uint32_t data_size = m_frameSize;
             uint32_t frames_in_superframe, frame_sizes[8];
 
             ParseSuperFrameIndex(data_start, data_size, frame_sizes, &frames_in_superframe);
@@ -147,7 +147,7 @@ bool VulkanVP9Decoder::ParseByteStream(const VkParserBitstreamPacket* pck, size_
                     const uint8_t marker = data_start[0];
                     const uint32_t frames = (marker & 0x7) + 1;
                     const uint32_t mag = ((marker >> 3) & 0x3) + 1;
-                    const int index_sz = 2 + mag * frames;
+                    const uint32_t index_sz = 2 + mag * frames;
 
                     if ((data_size >= index_sz) && (data_start[index_sz - 1] == marker)) {
                         data_start += index_sz;
@@ -162,15 +162,18 @@ bool VulkanVP9Decoder::ParseByteStream(const VkParserBitstreamPacket* pck, size_
 
                 // Use the correct size for this frame, if an index is present
                 if (frames_in_superframe > 0) {
-                    int this_sz = frame_sizes[frames_processed];
-                    frame_size = this_sz;
-                    int FrameStart = 0;
-                    if (data_size < this_sz) {
+                    frame_size = frame_sizes[frames_processed];
+                    if (data_size < frame_size) {
                         // Invalid frame size in index
                         return false;
                     }
-                    data_size = this_sz;
-                    m_nalu.start_offset = FrameStart;
+                    data_size = frame_size;
+                    m_nalu.start_offset = sizeparsed;
+
+                    frame_start = 0;
+                    for (uint32_t i = 1; i <= frames_processed; i++) {
+                        frame_start += frame_sizes[i - 1];
+                    }
                 }
 
                 ParseFrameHeader(m_bitstreamData.GetBitstreamPtr() + frame_start, frame_size);
