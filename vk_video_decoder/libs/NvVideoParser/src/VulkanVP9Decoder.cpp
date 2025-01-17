@@ -22,9 +22,6 @@ VulkanVP9Decoder::VulkanVP9Decoder(VkVideoCodecOperationFlagBitsKHR std)
     : VulkanVideoDecoder(std)
     , m_PicData()
     , m_pCurrPic()
-    , m_pLastRef()
-    , m_pGoldenRef()
-    , m_pAltRef()
     , m_frameIdx(-1)
     , m_dataSize()
     , m_frameSizeChanged()
@@ -34,12 +31,7 @@ VulkanVP9Decoder::VulkanVP9Decoder(VkVideoCodecOperationFlagBitsKHR std)
     , m_pictureStarted()
     , m_bitstreamComplete(true)
     , m_pBuffers()
-    , m_pOutFrame()
 {
-    for (uint32_t i = 0; i < STD_VIDEO_VP9_NUM_REF_FRAMES; i++) {
-        ref_frame_id[i] = -1;
-        pic_idx[i] = -1;
-    }
 }
 
 VulkanVP9Decoder::~VulkanVP9Decoder()
@@ -51,8 +43,6 @@ void VulkanVP9Decoder::InitParser()
     m_bNoStartCodes = true;
     m_bEmulBytesPresent = false;
     m_pCurrPic = nullptr;
-    m_pLastRef = nullptr;
-    m_pGoldenRef = nullptr;
     m_bitstreamComplete = true;
     m_pictureStarted = false;
     EndOfStream();
@@ -68,18 +58,6 @@ void VulkanVP9Decoder::EndOfStream()
         if (m_pBuffers[i].buffer) {
             m_pBuffers[i].buffer->Release();
             m_pBuffers[i].buffer = nullptr;
-        }
-    }
-
-    // Clear cached references
-    m_pLastRef = nullptr;
-    m_pGoldenRef = nullptr;
-    m_pAltRef = nullptr;
-
-    for (int i = 0; i < VP9_MAX_NUM_SPATIAL_LAYERS; i++) {
-        if (m_pOutFrame[i]) {
-            m_pOutFrame[i]->Release();
-            m_pOutFrame[i] = nullptr;
         }
     }
 }
@@ -359,10 +337,7 @@ bool VulkanVP9Decoder::ParseUncompressedHeader()
     StdVideoVP9LoopFilter* pStdLoopFilter = &m_PicData.stdLoopFilter;
     m_frameSizeChanged = false;
 
-    if (u(2) != VP9_FRAME_MARKER) {
-        assert(!"Invalid frame marker\n");
-        return false;
-    }
+    VP9_CHECK_FRAME_MARKER;
 
     pStdPicInfo->profile = (StdVideoVP9Profile)u(2);
     if (pStdPicInfo->profile == STD_VIDEO_VP9_PROFILE_3) {
@@ -424,9 +399,6 @@ bool VulkanVP9Decoder::ParseUncompressedHeader()
                 pPicData->ref_frame_idx[i] = u(3);
                 pStdPicInfo->ref_frame_sign_bias_mask = (u(1) << i);
             }
-            m_pLastRef = m_pBuffers[pPicData->ref_frame_idx[0]].buffer;
-            m_pGoldenRef = m_pBuffers[pPicData->ref_frame_idx[1]].buffer;
-            m_pAltRef = m_pBuffers[pPicData->ref_frame_idx[2]].buffer;
 
             ParseFrameAndRenderSizeWithRefs();
 

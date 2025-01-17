@@ -35,6 +35,12 @@
 #define VP9_BUFFER_POOL_MAX_SIZE 10
 #define VP9_MAX_NUM_SPATIAL_LAYERS 4
 
+#define VP9_CHECK_FRAME_MARKER {    \
+  if (u(2) != VP9_FRAME_MARKER) {   \
+    assert(!"Invalid frame marker");\
+    return false;                   \
+  }                                 \
+}
 
 #define VP9_CHECK_ZERO_BIT {    \
   if (u(1) != 0) {              \
@@ -70,9 +76,6 @@ protected:
     VkParserVp9PictureData m_PicData;
 
     VkPicIf*      m_pCurrPic;
-    VkPicIf*      m_pLastRef;
-    VkPicIf*      m_pGoldenRef;
-    VkPicIf*      m_pAltRef;
     VkPicIf*      m_pOutFrame[VP9_MAX_NUM_SPATIAL_LAYERS];
 
     int           m_frameIdx;
@@ -84,10 +87,6 @@ protected:
     int           m_rtOrigHeight;
     bool          m_pictureStarted;
     bool          m_bitstreamComplete;
-
-    int           ref_frame_id[STD_VIDEO_VP9_NUM_REF_FRAMES];
-    int           pic_idx[STD_VIDEO_VP9_NUM_REF_FRAMES];
-    int           RefValid[STD_VIDEO_VP9_NUM_REF_FRAMES];
 
     vp9_ref_frames_s m_pBuffers[VP9_BUFFER_POOL_MAX_SIZE];
 
