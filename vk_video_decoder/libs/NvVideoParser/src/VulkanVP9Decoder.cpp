@@ -30,8 +30,10 @@ VulkanVP9Decoder::VulkanVP9Decoder(VkVideoCodecOperationFlagBitsKHR std)
     , m_rtOrigHeight()
     , m_pictureStarted()
     , m_bitstreamComplete(true)
-    , m_pBuffers()
-{
+    , m_lastFrameWidth(0)
+    , m_lastFrameHeight(0)
+    , m_lastShowFrame(false)
+    , m_pBuffers() {
 }
 
 VulkanVP9Decoder::~VulkanVP9Decoder()
@@ -504,10 +506,8 @@ void VulkanVP9Decoder::ParseFrameAndRenderSize()
 
     pPicData->FrameWidth = u(16) + 1;
     pPicData->FrameHeight = u(16) + 1;
-    pPicData->MiCols = (pPicData->FrameWidth + 7) >> 3;
-    pPicData->MiRows = (pPicData->FrameHeight + 7) >> 3;
-    pPicData->Sb64Cols = (pPicData->MiCols + 7) >> 3;
-    pPicData->Sb64Rows = (pPicData->MiRows + 7) >> 3;
+
+    ComputeImageSize();
 
     if (u(1) == 1) { // render_and_frame_size_different
         pPicData->renderWidth = u(16) + 1;
@@ -532,10 +532,7 @@ void VulkanVP9Decoder::ParseFrameAndRenderSizeWithRefs()
                 pPicData->FrameWidth = pRefPic->decodeWidth;
                 pPicData->FrameHeight = pRefPic->decodeHeight;
 
-                pPicData->MiCols = (pPicData->FrameWidth + 7) >> 3;
-                pPicData->MiRows = (pPicData->FrameHeight + 7) >> 3;
-                pPicData->Sb64Cols = (pPicData->MiCols + 7) >> 3;
-                pPicData->Sb64Rows = (pPicData->MiRows + 7) >> 3;
+                ComputeImageSize();
             }
 
             if (u(1) == 1) { // render_and_frame_size_different
@@ -552,6 +549,31 @@ void VulkanVP9Decoder::ParseFrameAndRenderSizeWithRefs()
     if (!found_ref) {
         ParseFrameAndRenderSize();
     }
+}
+
+void VulkanVP9Decoder::ComputeImageSize()
+{
+    VkParserVp9PictureData* pPicData = &m_PicData;
+
+    // compute_image_size()
+    pPicData->MiCols = (pPicData->FrameWidth + 7) >> 3;
+    pPicData->MiRows = (pPicData->FrameHeight + 7) >> 3;
+    pPicData->Sb64Cols = (pPicData->MiCols + 7) >> 3;
+    pPicData->Sb64Rows = (pPicData->MiRows + 7) >> 3;
+
+    // compute_image_size() side effects (7.2.6)
+    if (m_lastFrameHeight != pPicData->FrameHeight || m_lastFrameWidth != pPicData->FrameWidth) {
+        m_frameSizeChanged = true;
+    } else { /* 2.a, 2.b */
+        bool intraOnly = pPicData->stdPictureInfo.frame_type == STD_VIDEO_VP9_FRAME_TYPE_KEY || pPicData->stdPictureInfo.flags.intra_only;
+        pPicData->stdPictureInfo.flags.UsePrevFrameMvs = m_lastShowFrame && /* 2.c */
+                                                         pPicData->stdPictureInfo.flags.error_resilient_mode == 0 && /* 2.d */
+                                                         !intraOnly /* 2.e */;
+    }
+    m_lastFrameHeight = pPicData->FrameHeight;
+    m_lastFrameWidth = pPicData->FrameWidth;
+    m_lastShowFrame = pPicData->stdPictureInfo.flags.show_frame;
+
 }
 
 void VulkanVP9Decoder::ParseLoopFilterParams()
