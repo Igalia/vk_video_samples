@@ -88,6 +88,11 @@ protected:
     bool          m_pictureStarted;
     bool          m_bitstreamComplete;
 
+    // Parsing state for compute_image_size() side effects
+    int           m_lastFrameWidth;
+    int           m_lastFrameHeight;
+    bool          m_lastShowFrame;
+
     vp9_ref_frames_s m_pBuffers[VP9_BUFFER_POOL_MAX_SIZE];
 
 protected:
@@ -115,6 +120,7 @@ private:
     bool                    ParseColorConfig();
     void                    ParseFrameAndRenderSize();
     void                    ParseFrameAndRenderSizeWithRefs();
+    void                    ComputeImageSize();
     void                    ParseLoopFilterParams();
     void                    ParseQuantizationParams();
     int32_t                 ReadDeltaQ();
