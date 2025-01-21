@@ -93,6 +93,10 @@ protected:
     int           m_lastFrameHeight;
     bool          m_lastShowFrame;
 
+    // Last used loop filter parameters
+    int8_t        m_loopFilterRefDeltas[STD_VIDEO_VP9_MAX_REF_FRAMES];
+    int8_t        m_loopFilterModeDeltas[STD_VIDEO_VP9_LOOP_FILTER_ADJUSTMENTS];
+
     vp9_ref_frames_s m_pBuffers[VP9_BUFFER_POOL_MAX_SIZE];
 
 protected:

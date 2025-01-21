@@ -582,13 +582,14 @@ void VulkanVP9Decoder::ParseLoopFilterParams()
     StdVideoDecodeVP9PictureInfo *pStdPicInfo = &m_PicData.stdPictureInfo;
     StdVideoVP9LoopFilter* pStdLoopFilter = &m_PicData.stdLoopFilter;
 
-    if (pPicData->FrameIsIntra || (pStdPicInfo->flags.error_resilient_mode == 0)) {
-        memset(pStdLoopFilter->loop_filter_ref_deltas, 0, sizeof(pStdLoopFilter->loop_filter_ref_deltas));
-        memset(pStdLoopFilter->loop_filter_mode_deltas, 0, sizeof(pStdLoopFilter->loop_filter_mode_deltas));
-        pStdLoopFilter->loop_filter_ref_deltas[0] = 1;
-        pStdLoopFilter->loop_filter_ref_deltas[1] = 0;
-        pStdLoopFilter->loop_filter_ref_deltas[2] = -1;
-        pStdLoopFilter->loop_filter_ref_deltas[3] = -1;
+    if (pPicData->FrameIsIntra || (pStdPicInfo->flags.error_resilient_mode == 1)) {
+        // setup_past_independence() for loop filter params
+        memset(m_loopFilterRefDeltas, 0, sizeof(m_loopFilterRefDeltas));
+        memset(m_loopFilterModeDeltas, 0, sizeof(m_loopFilterModeDeltas));
+        m_loopFilterRefDeltas[0] = 1;
+        m_loopFilterRefDeltas[1] = 0;
+        m_loopFilterRefDeltas[2] = -1;
+        m_loopFilterRefDeltas[3] = -1;
     }
 
     pStdLoopFilter->loop_filter_level =  u(6);
@@ -605,9 +606,9 @@ void VulkanVP9Decoder::ParseLoopFilterParams()
                 uint8_t update_ref_delta = u(1);
                 pStdLoopFilter->update_ref_delta |= update_ref_delta << i;
                 if (update_ref_delta == 1) {
-                    pStdLoopFilter->loop_filter_ref_deltas[i] = u(6);
+                    m_loopFilterRefDeltas[i] = u(6);
                     if (u(1)) { // sign
-                        pStdLoopFilter->loop_filter_ref_deltas[i] = -pStdLoopFilter->loop_filter_ref_deltas[i];
+                        m_loopFilterRefDeltas[i] = -m_loopFilterRefDeltas[i];
                     }
                 }
             }
@@ -616,14 +617,17 @@ void VulkanVP9Decoder::ParseLoopFilterParams()
                 uint8_t update_mode_delta = u( 1);
                 pStdLoopFilter->update_mode_delta |= update_mode_delta << i;
                 if (update_mode_delta) {
-                    pStdLoopFilter->loop_filter_mode_deltas[i] = u(6);
+                    m_loopFilterModeDeltas[i] = u(6);
                     if(u(1)) { // sign
-                        pStdLoopFilter->loop_filter_mode_deltas[i] = -pStdLoopFilter->loop_filter_mode_deltas[i];
+                        m_loopFilterModeDeltas[i] = -m_loopFilterRefDeltas[i];
                     }
                 }
             }
         }
     }
+
+    memcpy(pStdLoopFilter->loop_filter_ref_deltas, m_loopFilterRefDeltas, sizeof(m_loopFilterRefDeltas));
+    memcpy(pStdLoopFilter->loop_filter_mode_deltas, m_loopFilterModeDeltas, sizeof(m_loopFilterModeDeltas));
 }
 
 void VulkanVP9Decoder::ParseQuantizationParams()
