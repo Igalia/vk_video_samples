@@ -514,7 +514,7 @@ void VulkanVP9Decoder::ParseFrameAndRenderSize()
         pPicData->renderHeight = u(16) + 1;
     } else {
         pPicData->renderWidth = pPicData->FrameWidth;
-        pPicData->renderHeight = pPicData->renderHeight;
+        pPicData->renderHeight = pPicData->FrameHeight;
     }
 }
 
@@ -540,7 +540,7 @@ void VulkanVP9Decoder::ParseFrameAndRenderSizeWithRefs()
                 pPicData->renderHeight = u(16) + 1;
             } else {
                 pPicData->renderWidth = pPicData->FrameWidth;
-                pPicData->renderHeight = pPicData->renderHeight;
+                pPicData->renderHeight = pPicData->FrameHeight;
             }
 
             break;
@@ -807,8 +807,8 @@ bool VulkanVP9Decoder::BeginPicture(VkParserPictureData* pnvpd)
     VkParserSequenceInfo nvsi = m_ExtSeqInfo;
     nvsi.eCodec = VK_VIDEO_CODEC_OPERATION_DECODE_VP9_BIT_KHR;
     nvsi.nChromaFormat = pPicDataVP9->ChromaFormat;
-    nvsi.nMaxWidth = width; // TODO: alignment???
-    nvsi.nMaxHeight = height;
+    //nvsi.nMaxWidth = width; // TODO: How get max width and height??
+    //nvsi.nMaxHeight = height;
     nvsi.nCodedWidth = width;
     nvsi.nCodedHeight = height;
     nvsi.nDisplayWidth = width;
@@ -846,6 +846,9 @@ bool VulkanVP9Decoder::BeginPicture(VkParserPictureData* pnvpd)
     if (m_pCurrPic == nullptr) {
         m_pClient->AllocPictureBuffer(&m_pCurrPic);
         assert(m_pCurrPic);
+
+        m_pCurrPic->decodeWidth = width;
+        m_pCurrPic->decodeHeight = height;
     }
 
     pnvpd->PicWidthInMbs = nvsi.nCodedWidth >> 4;
@@ -855,9 +858,6 @@ bool VulkanVP9Decoder::BeginPicture(VkParserPictureData* pnvpd)
     pnvpd->ref_pic_flag = 1;
     pnvpd->intra_pic_flag = pPicDataVP9->FrameIsIntra;
     pnvpd->chroma_format = pPicDataVP9->ChromaFormat;
-
-    m_pCurrPic->decodeWidth = width;
-    m_pCurrPic->decodeHeight = height;
 
     // Reference slots information
     for (int i = 0; i < STD_VIDEO_VP9_NUM_REF_FRAMES; i++) {
