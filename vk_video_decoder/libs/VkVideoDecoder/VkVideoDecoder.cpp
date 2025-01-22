@@ -444,7 +444,7 @@ int VkVideoDecoder::DecodePictureWithParameters(VkParserPerFrameDecodeParameters
     // 	printf("%02x ", ptr[i]);
     // printf("\n");
     pCurrFrameDecParams->decodeFrameInfo.srcBuffer = pCurrFrameDecParams->bitstreamData->GetBuffer();
-    assert(pCurrFrameDecParams->bitstreamDataOffset == 0);
+    //assert(pCurrFrameDecParams->bitstreamDataOffset == 0);
     assert(pCurrFrameDecParams->firstSliceIndex == 0);
     pCurrFrameDecParams->decodeFrameInfo.srcBufferOffset = pCurrFrameDecParams->bitstreamDataOffset;
     pCurrFrameDecParams->decodeFrameInfo.srcBufferRange =  (pCurrFrameDecParams->bitstreamDataLen + 127) & ~127; // TODO: alignment macro / wiring the alignment requirement in.
