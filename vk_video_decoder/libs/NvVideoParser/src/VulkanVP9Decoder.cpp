@@ -225,13 +225,18 @@ bool VulkanVP9Decoder::ParseFrameHeader(const uint8_t* pBitstream, uint32_t fram
         assert((!"Error in ParseUncompressedVP9\n"));
         return 0;
     }
+    // handle bitstream start offset alignment (for super frame)
+    uint32_t addOffset = m_nalu.start_offset & (m_bufferOffsetAlignment - 1);
+    m_PicData.uncompressedHeaderOffset += addOffset;
+    m_PicData.compressedHeaderOffset += addOffset;
+    m_PicData.tilesOffset += addOffset;
 
     *m_pVkPictureData = VkParserPictureData();
     m_pVkPictureData->CodecSpecific.vp9 = m_PicData;
     m_pVkPictureData->numSlices = m_PicData.numTiles;
-    m_pVkPictureData->bitstreamDataLen = framesize;
+    m_pVkPictureData->bitstreamDataLen = framesize + addOffset;
     m_pVkPictureData->bitstreamData = m_bitstreamData.GetBitstreamBuffer();
-    m_pVkPictureData->bitstreamDataOffset = 0;
+    m_pVkPictureData->bitstreamDataOffset = m_nalu.start_offset & ~((int64_t)m_bufferOffsetAlignment - 1);
 
      if (BeginPicture(m_pVkPictureData)) {
         int lDisp = 0;
