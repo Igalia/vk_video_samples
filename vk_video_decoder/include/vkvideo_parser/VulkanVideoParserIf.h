@@ -340,7 +340,7 @@ typedef struct VkParserVp9PictureData {
 
     // references
     uint8_t  ref_frame_idx[STD_VIDEO_VP9_REFS_PER_FRAME];
-    uint8_t  pic_idx[STD_VIDEO_VP9_REFS_PER_FRAME];
+    uint8_t  pic_idx[STD_VIDEO_VP9_NUM_REF_FRAMES];
     VkPicIf* pLastRef;
     VkPicIf* pGoldenRef;
     VkPicIf* pAltRef;
