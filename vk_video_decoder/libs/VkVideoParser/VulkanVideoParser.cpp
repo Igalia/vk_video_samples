@@ -1897,11 +1897,11 @@ uint32_t VulkanVideoParser::FillDpbVP9State(
     if (m_dumpDpbData) {
         printf(";;;; ======= VP9 DPB fill begin %d =======\n", m_nCurrentPictureID);
         printf("ref_frame_idx: "); {
-        for (int i = 0 ; i < 7; i++)
+        for (int i = 0 ; i < STD_VIDEO_VP9_REFS_PER_FRAME; i++)
             printf("%02d ", i);
         }
         printf("\nref_frame_idx: ");
-        for (int i = 0 ; i < 7; i++) {
+        for (int i = 0 ; i < STD_VIDEO_VP9_REFS_PER_FRAME; i++) {
             printf("%02d ", pin->ref_frame_idx[i]);
         }
         printf("\n");
