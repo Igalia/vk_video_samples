@@ -405,9 +405,10 @@ bool VulkanVP9Decoder::ParseUncompressedHeader()
         } else { // inter frame
             pStdPicInfo->refresh_frame_flags = u(STD_VIDEO_VP9_NUM_REF_FRAMES);
 
+            pStdPicInfo->ref_frame_sign_bias_mask = 0;
             for (int i = 0; i < STD_VIDEO_VP9_REFS_PER_FRAME; i++) {
                 pPicData->ref_frame_idx[i] = u(3);
-                pStdPicInfo->ref_frame_sign_bias_mask = (u(1) << (STD_VIDEO_VP9_REFERENCE_NAME_LAST_FRAME + i));
+                pStdPicInfo->ref_frame_sign_bias_mask |= (u(1) << (STD_VIDEO_VP9_REFERENCE_NAME_LAST_FRAME + i));
             }
 
             ParseFrameAndRenderSizeWithRefs();
