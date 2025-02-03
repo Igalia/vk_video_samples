@@ -225,6 +225,18 @@ bool VulkanVP9Decoder::ParseFrameHeader(const uint8_t* pBitstream, uint32_t fram
         assert((!"Error in ParseUncompressedVP9\n"));
         return 0;
     }
+    if (m_PicData.show_existing_frame == true)  {
+        // display an existing frame
+        m_pCurrPic = m_pBuffers[m_PicData.frame_to_show_map_idx].buffer;
+        if (m_pCurrPic) {
+            m_pCurrPic->AddRef();
+        }
+
+        // Call back codec for post-decode event (display the decoded frame)
+        EndPicture();
+        return 0;
+    }
+
     // handle bitstream start offset alignment (for super frame)
     uint32_t addOffset = m_nalu.start_offset & (m_bufferOffsetAlignment - 1);
     m_PicData.uncompressedHeaderOffset += addOffset;
@@ -349,7 +361,7 @@ bool VulkanVP9Decoder::ParseUncompressedHeader()
 
     VP9_CHECK_FRAME_MARKER;
 
-    pStdPicInfo->profile = (StdVideoVP9Profile)u(2);
+    pStdPicInfo->profile = (StdVideoVP9Profile)(u(1) | (u(1) << 1));
     if (pStdPicInfo->profile == STD_VIDEO_VP9_PROFILE_3) {
         if (u(1) != 0) {
             assert(!"Invalid syntax");
