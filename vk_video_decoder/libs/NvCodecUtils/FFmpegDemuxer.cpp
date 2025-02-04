@@ -141,8 +141,7 @@ private:
             } else if (videoCodec == AV_CODEC_ID_AV1) {
                 bsf = av_bsf_get_by_name("av1_metadata");
             } else if (videoCodec == AV_CODEC_ID_VP9) {
-                assert(0);
-                bsf = NULL;
+                bsf = av_bsf_get_by_name("vp9_metadata");
             }
 
             if (!bsf) {

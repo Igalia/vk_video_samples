@@ -227,13 +227,13 @@ bool VulkanVP9Decoder::ParseFrameHeader(const uint8_t* pBitstream, uint32_t fram
     }
     if (m_PicData.show_existing_frame == true)  {
         // display an existing frame
-        m_pCurrPic = m_pBuffers[m_PicData.frame_to_show_map_idx].buffer;
-        if (m_pCurrPic) {
-            m_pCurrPic->AddRef();
+        VkPicIf* pDispPic = m_pBuffers[m_PicData.frame_to_show_map_idx].buffer;
+        if (pDispPic) {
+            pDispPic->AddRef();
         }
 
-        // Call back codec for post-decode event (display the decoded frame)
-        EndPicture();
+        AddBuffertoOutputQueue(pDispPic);
+
         return 0;
     }
 
@@ -250,68 +250,39 @@ bool VulkanVP9Decoder::ParseFrameHeader(const uint8_t* pBitstream, uint32_t fram
     m_pVkPictureData->bitstreamData = m_bitstreamData.GetBitstreamBuffer();
     m_pVkPictureData->bitstreamDataOffset = m_nalu.start_offset & ~((int64_t)m_bufferOffsetAlignment - 1);
 
-     if (BeginPicture(m_pVkPictureData)) {
-        int lDisp = 0;
+    if (!BeginPicture(m_pVkPictureData)) {
+        assert(!"BeginPicture failed");
+        return false;
+    }
 
-        // Find an entry in m_DispInfo
-        for (int i = 0; i < MAX_DELAY; i++) {
-            if (m_DispInfo[i].pPicBuf == m_pVkPictureData->pCurrPic) {
-                lDisp = i;
-                break;
-            }
-            if ((m_DispInfo[i].pPicBuf == NULL)
-             || ((m_DispInfo[lDisp].pPicBuf != NULL) && (m_DispInfo[i].llPTS - m_DispInfo[lDisp].llPTS < 0))) {
-                lDisp = i;
-             }
-        }
-        m_DispInfo[lDisp].pPicBuf = m_pVkPictureData->pCurrPic;
-        m_DispInfo[lDisp].bSkipped = false;
-        m_DispInfo[lDisp].lPOC = m_pVkPictureData->picture_order_count;
-
-        m_DispInfo[lDisp].lNumFields = 2;
-        if (m_PicData.stdPictureInfo.flags.show_frame == 1) {
-            // Find a PTS in the list
-            unsigned int ndx = m_lPTSPos;
-            m_DispInfo[lDisp].llPTS = m_llExpectedPTS; // Will be updated later on
-
-            for (int k=0; k<MAX_QUEUED_PTS; k++) {
-                if ((m_PTSQueue[ndx].bPTSValid) && (m_PTSQueue[ndx].llPTSPos - m_llFrameStartLocation <= (m_bNoStartCodes?0:3))) {
-                    m_DispInfo[lDisp].bPTSValid = true;
-                    m_DispInfo[lDisp].llPTS = m_PTSQueue[ndx].llPTS;
-                    m_PTSQueue[ndx].bPTSValid = false;
-                }
-                ndx = (ndx+1) % MAX_QUEUED_PTS;
-            }
-        }
-
-        if (m_pClient != NULL) {
-            // Notify client
-            if (!m_pClient->DecodePicture(m_pVkPictureData)) {
-                m_DispInfo[lDisp].bSkipped = true;
-                // WARNING: skipped decoding current picture;
-            } else {
-                m_nCallbackEventCount++;
-            }
+    bool bSkipped = false;
+    if (m_pClient != nullptr) {
+        // Notify client
+        if (!m_pClient->DecodePicture(m_pVkPictureData)) {
+            bSkipped = true;
+            // WARNING: skipped decoding current picture;
         } else {
-            // WARNING: no valid render target for current picture
+            m_nCallbackEventCount++;
         }
+    } else {
+        // WARNING: no valid render target for current picture
+    }
 
-        //m_PicData.prevIsKeyFrame = m_PicData.keyFrame;
-        //m_PicData.PrevShowFrame  = m_PicData.showFrame;
-        UpdateFramePointers(m_pCurrPic);
+    //m_PicData.prevIsKeyFrame = m_PicData.keyFrame;
+    //m_PicData.PrevShowFrame  = m_PicData.showFrame;
+    UpdateFramePointers(m_pCurrPic);
 
-        if (m_PicData.stdPictureInfo.flags.show_frame) {
-            // Call back codec for post-decode event (display the decoded frame)
-            EndPicture();
-        } else {
-            m_pCurrPic->Release();
-            m_pCurrPic = NULL;
-        }
+    if (m_PicData.stdPictureInfo.flags.show_frame && !bSkipped) {
+        // Call back codec for post-decode event (display the decoded frame)
+        AddBuffertoOutputQueue(m_pCurrPic);
+        m_pCurrPic = nullptr;
+    } else {
+        m_pCurrPic->Release();
+        m_pCurrPic = nullptr;
     }
 
     return 1;
 }
-
 
 void VulkanVP9Decoder::UpdateFramePointers(VkPicIf* currentPicture)
 {
@@ -340,12 +311,53 @@ void VulkanVP9Decoder::UpdateFramePointers(VkPicIf* currentPicture)
     //}
 }
 
-void VulkanVP9Decoder::EndPicture()
+bool VulkanVP9Decoder::AddBuffertoOutputQueue(VkPicIf* pDispPic)
 {
-    if (m_pCurrPic) {
-        display_picture(m_pCurrPic);
-        m_pCurrPic->Release();
-        m_pCurrPic = NULL;
+    AddBuffertoDispQueue(pDispPic);
+    lEndPicture(pDispPic);
+
+    return true;
+}
+
+void VulkanVP9Decoder::AddBuffertoDispQueue(VkPicIf* pDispPic)
+{
+    int lDisp = 0;
+
+    // Find an entry in m_DispInfo
+    for (int i = 0; i < MAX_DELAY; i++) {
+        if (m_DispInfo[i].pPicBuf == pDispPic) {
+            lDisp = i;
+            break;
+        }
+        if ((m_DispInfo[i].pPicBuf == nullptr)
+            || ((m_DispInfo[lDisp].pPicBuf != nullptr) && (m_DispInfo[i].llPTS - m_DispInfo[lDisp].llPTS < 0))) {
+            lDisp = i;
+        }
+    }
+    m_DispInfo[lDisp].pPicBuf = pDispPic;
+    m_DispInfo[lDisp].bSkipped = false;
+    m_DispInfo[lDisp].lPOC = 0;
+    m_DispInfo[lDisp].lNumFields = 2;
+
+    // Find a PTS in the list
+    unsigned int ndx = m_lPTSPos;
+    m_DispInfo[lDisp].llPTS = m_llExpectedPTS; // Will be updated later on
+
+    for (int k = 0; k < MAX_QUEUED_PTS; k++) {
+        if ((m_PTSQueue[ndx].bPTSValid) && (m_PTSQueue[ndx].llPTSPos - m_llFrameStartLocation <= (m_bNoStartCodes?0:3))) {
+            m_DispInfo[lDisp].bPTSValid = true;
+            m_DispInfo[lDisp].llPTS = m_PTSQueue[ndx].llPTS;
+            m_PTSQueue[ndx].bPTSValid = false;
+        }
+        ndx = (ndx + 1) % MAX_QUEUED_PTS;
+    }
+}
+
+void VulkanVP9Decoder::lEndPicture(VkPicIf* pDispPic)
+{
+    if (pDispPic) {
+        display_picture(pDispPic);
+        pDispPic->Release();
     }
 
 }
