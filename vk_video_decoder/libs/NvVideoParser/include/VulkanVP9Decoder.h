@@ -101,7 +101,9 @@ protected:
 
 protected:
     void UpdateFramePointers(VkPicIf* currentPicture);
-    virtual void EndPicture() override;
+    bool AddBuffertoOutputQueue(VkPicIf* pDispPic);
+    void AddBuffertoDispQueue(VkPicIf* pDispPic);
+    virtual void lEndPicture(VkPicIf* pDispPic);
     void EndOfStream() override;
 
 public:
