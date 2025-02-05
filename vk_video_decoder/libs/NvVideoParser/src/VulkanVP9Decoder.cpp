@@ -601,6 +601,7 @@ void VulkanVP9Decoder::ComputeImageSize()
     // compute_image_size() side effects (7.2.6)
     if (m_lastFrameHeight != pPicData->FrameHeight || m_lastFrameWidth != pPicData->FrameWidth) {
         m_frameSizeChanged = true;
+        pPicData->stdPictureInfo.flags.UsePrevFrameMvs = false;
     } else { /* 2.a, 2.b */
         bool intraOnly = pPicData->stdPictureInfo.frame_type == STD_VIDEO_VP9_FRAME_TYPE_KEY || pPicData->stdPictureInfo.flags.intra_only;
         pPicData->stdPictureInfo.flags.UsePrevFrameMvs = m_lastShowFrame && /* 2.c */
