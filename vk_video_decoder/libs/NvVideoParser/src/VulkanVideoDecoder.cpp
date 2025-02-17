@@ -20,9 +20,6 @@
 #include "nvVulkanVideoUtils.h"
 #include "nvVulkanVideoParser.h"
 #include <algorithm>
-#ifdef ENABLE_VP9_DECODER
-#include <VulkanVP9Decoder.h>
-#endif
 
 VulkanVideoDecoder::VulkanVideoDecoder(VkVideoCodecOperationFlagBitsKHR std)
   : m_refCount(0),
@@ -829,7 +826,7 @@ void VulkanVideoDecoder::end_of_stream()
 #include "VulkanH264Decoder.h"
 #include "VulkanH265Decoder.h"
 #include "VulkanAV1Decoder.h"
-#include "VulkanVp9Decoder.h"
+#include "VulkanVP9Decoder.h"
 
 static nvParserLogFuncType gParserLogFunc = nullptr;
 static int gLogLevel = 1;
