@@ -52,9 +52,11 @@ public:
     {
         return  (videoCodecOperations & (VK_VIDEO_CODEC_OPERATION_DECODE_H264_BIT_KHR |
                                          VK_VIDEO_CODEC_OPERATION_DECODE_H265_BIT_KHR |
-                                         VK_VIDEO_CODEC_OPERATION_DECODE_AV1_BIT_KHR |
-                                         VK_VIDEO_CODEC_OPERATION_ENCODE_H264_BIT_EXT |
-                                         VK_VIDEO_CODEC_OPERATION_ENCODE_H265_BIT_EXT));
+                                         VK_VIDEO_CODEC_OPERATION_DECODE_AV1_BIT_KHR  |
+                                         VK_VIDEO_CODEC_OPERATION_DECODE_VP9_BIT_KHR  |
+                                         VK_VIDEO_CODEC_OPERATION_ENCODE_H264_BIT_KHR |
+                                         VK_VIDEO_CODEC_OPERATION_ENCODE_H265_BIT_KHR |
+                                         VK_VIDEO_CODEC_OPERATION_ENCODE_AV1_BIT_KHR));
     }
 
     bool PopulateProfileExt(VkBaseInStructure const * pVideoProfileExt)
@@ -101,14 +103,29 @@ public:
                 m_av1DecodeProfile = *pProfileExt;
             } else {
                 //  Use default ext profile parameters
-                m_av1DecodeProfile.sType         = VK_STRUCTURE_TYPE_VIDEO_DECODE_H265_PROFILE_INFO_KHR;
-                m_av1DecodeProfile.stdProfile = STD_VIDEO_AV1_PROFILE_MAIN; // @review: why are we hardcoding profiles here, they should come from the parser.
+                m_av1DecodeProfile.sType      = VK_STRUCTURE_TYPE_VIDEO_DECODE_AV1_PROFILE_INFO_KHR;
+                m_av1DecodeProfile.stdProfile = STD_VIDEO_AV1_PROFILE_MAIN;
             }
             m_profile.pNext = &m_av1DecodeProfile;
             m_av1DecodeProfile.pNext = NULL;
-        } else if (m_profile.videoCodecOperation == VK_VIDEO_CODEC_OPERATION_ENCODE_H264_BIT_EXT) {
-            VkVideoEncodeH264ProfileInfoEXT const * pProfileExt = (VkVideoEncodeH264ProfileInfoEXT const *)pVideoProfileExt;
-            if (pProfileExt && (pProfileExt->sType != VK_STRUCTURE_TYPE_VIDEO_ENCODE_H264_PROFILE_INFO_EXT)) {
+        } else if (m_profile.videoCodecOperation == VK_VIDEO_CODEC_OPERATION_DECODE_VP9_BIT_KHR) {
+            VkVideoDecodeVP9ProfileInfoKHR const * pProfileExt = (VkVideoDecodeVP9ProfileInfoKHR const *)pVideoProfileExt;
+            if (pProfileExt && (pProfileExt->sType != VK_STRUCTURE_TYPE_VIDEO_DECODE_VP9_PROFILE_INFO_KHR)) {
+                m_profile.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
+                return false;
+            }
+            if (pProfileExt) {
+                m_vp9DecodeProfile = *pProfileExt;
+            } else {
+                //  Use default ext profile parameters
+                m_vp9DecodeProfile.sType      = VK_STRUCTURE_TYPE_VIDEO_DECODE_VP9_PROFILE_INFO_KHR;
+                m_vp9DecodeProfile.stdProfile = STD_VIDEO_VP9_PROFILE_0;
+            }
+            m_profile.pNext = &m_vp9DecodeProfile;
+            m_vp9DecodeProfile.pNext = NULL;
+        } else if (m_profile.videoCodecOperation == VK_VIDEO_CODEC_OPERATION_ENCODE_H264_BIT_KHR) {
+            VkVideoEncodeH264ProfileInfoKHR const * pProfileExt = (VkVideoEncodeH264ProfileInfoKHR const *)pVideoProfileExt;
+            if (pProfileExt && (pProfileExt->sType != VK_STRUCTURE_TYPE_VIDEO_ENCODE_H264_PROFILE_INFO_KHR)) {
                 m_profile.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
                 return false;
             }
@@ -174,8 +191,9 @@ public:
         VkVideoDecodeH264ProfileInfoKHR decodeH264ProfilesRequest;
         VkVideoDecodeH265ProfileInfoKHR decodeH265ProfilesRequest;
         VkVideoDecodeAV1ProfileInfoKHR  decodeAV1ProfilesRequest;
-        VkVideoEncodeH264ProfileInfoEXT encodeH264ProfilesRequest;
-        VkVideoEncodeH265ProfileInfoEXT encodeH265ProfilesRequest;
+        VkVideoDecodeVP9ProfileInfoKHR  decodeVP9ProfilesRequest;
+        VkVideoEncodeH264ProfileInfoKHR encodeH264ProfilesRequest;
+        VkVideoEncodeH265ProfileInfoKHR encodeH265ProfilesRequest;
         VkBaseInStructure* pVideoProfileExt = NULL;
 
         if (videoCodecOperation == VK_VIDEO_CODEC_OPERATION_DECODE_H264_BIT_KHR) {
@@ -207,9 +225,16 @@ public:
                                                        STD_VIDEO_H265_PROFILE_IDC_INVALID :
                                                        (StdVideoH265ProfileIdc)videoH26xProfileIdc;
             pVideoProfileExt = (VkBaseInStructure*)&decodeH265ProfilesRequest;
-        } else if (videoCodecOperation == VK_VIDEO_CODEC_OPERATION_ENCODE_H264_BIT_EXT) {
-            encodeH264ProfilesRequest.sType = VK_STRUCTURE_TYPE_VIDEO_ENCODE_H264_PROFILE_INFO_EXT;
-            encodeH264ProfilesRequest.pNext = NULL;
+        } else if (videoCodecOperation == VK_VIDEO_CODEC_OPERATION_DECODE_VP9_BIT_KHR) {
+            decodeVP9ProfilesRequest.sType = VK_STRUCTURE_TYPE_VIDEO_DECODE_VP9_PROFILE_INFO_KHR;
+            decodeVP9ProfilesRequest.pNext = NULL;
+            decodeVP9ProfilesRequest.stdProfile = (videoH26xProfileIdc == 0) ?
+                                                    STD_VIDEO_VP9_PROFILE_0 :
+                                                    (StdVideoVP9Profile)videoH26xProfileIdc;
+            pVideoProfileExt = (VkBaseInStructure*)&decodeVP9ProfilesRequest;
+        } else if (videoCodecOperation == VK_VIDEO_CODEC_OPERATION_ENCODE_H264_BIT_KHR) {
+            encodeH264ProfilesRequest.sType = VK_STRUCTURE_TYPE_VIDEO_ENCODE_H264_PROFILE_INFO_KHR;
+            encodeH264ProfilesRequest.pNext = pEncodeUsageInfo;
             encodeH264ProfilesRequest.stdProfileIdc = (videoH26xProfileIdc == 0) ?
                                                        STD_VIDEO_H264_PROFILE_IDC_INVALID :
                                                        (StdVideoH264ProfileIdc)videoH26xProfileIdc;
@@ -243,7 +268,9 @@ public:
     bool IsDecodeCodecType() const
     {
         return ((m_profile.videoCodecOperation == VK_VIDEO_CODEC_OPERATION_DECODE_H264_BIT_KHR) ||
-                (m_profile.videoCodecOperation == VK_VIDEO_CODEC_OPERATION_DECODE_H265_BIT_KHR));
+                (m_profile.videoCodecOperation == VK_VIDEO_CODEC_OPERATION_DECODE_H265_BIT_KHR) ||
+                (m_profile.videoCodecOperation == VK_VIDEO_CODEC_OPERATION_DECODE_AV1_BIT_KHR)  ||
+                (m_profile.videoCodecOperation == VK_VIDEO_CODEC_OPERATION_DECODE_VP9_BIT_KHR));
     }
 
     operator bool() const
@@ -296,7 +323,16 @@ public:
         }
     }
 
-    const VkVideoEncodeH264ProfileInfoEXT* GetEncodeH264Profile() const
+    const VkVideoDecodeVP9ProfileInfoKHR* GetDecodeVP9Profile() const
+    {
+        if (m_vp9DecodeProfile.sType == VK_STRUCTURE_TYPE_VIDEO_DECODE_VP9_PROFILE_INFO_KHR) {
+            return &m_vp9DecodeProfile;
+        } else {
+            return NULL;
+        }
+    }
+
+    const VkVideoEncodeH264ProfileInfoKHR* GetEncodeH264Profile() const
     {
         if (m_h264DecodeProfile.sType == VK_STRUCTURE_TYPE_VIDEO_ENCODE_H264_PROFILE_INFO_EXT) {
             return &m_h264EncodeProfile;
@@ -552,7 +588,9 @@ public:
             return "decode h.265";
         case VK_VIDEO_CODEC_OPERATION_DECODE_AV1_BIT_KHR:
             return "decode av1";
-        case VK_VIDEO_CODEC_OPERATION_ENCODE_H264_BIT_EXT:
+        case VK_VIDEO_CODEC_OPERATION_DECODE_VP9_BIT_KHR:
+            return "decode vp9";
+        case VK_VIDEO_CODEC_OPERATION_ENCODE_H264_BIT_KHR:
             return "encode h.264";
         case VK_VIDEO_CODEC_OPERATION_ENCODE_H265_BIT_EXT:
             return "encode h.265";
@@ -654,8 +692,9 @@ private:
         VkVideoDecodeH264ProfileInfoKHR m_h264DecodeProfile;
         VkVideoDecodeH265ProfileInfoKHR m_h265DecodeProfile;
         VkVideoDecodeAV1ProfileInfoKHR  m_av1DecodeProfile;
-        VkVideoEncodeH264ProfileInfoEXT m_h264EncodeProfile;
-        VkVideoEncodeH265ProfileInfoEXT m_h265EncodeProfile;
+        VkVideoDecodeVP9ProfileInfoKHR  m_vp9DecodeProfile;
+        VkVideoEncodeH264ProfileInfoKHR m_h264EncodeProfile;
+        VkVideoEncodeH265ProfileInfoKHR m_h265EncodeProfile;
     };
 };
 

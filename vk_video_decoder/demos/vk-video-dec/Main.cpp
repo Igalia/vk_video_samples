@@ -100,8 +100,54 @@ int main(int argc, const char **argv) {
     const bool supportsDisplay = true;
     const int32_t numDecodeQueues = ((programConfig.queueId != 0) ||
                                      (programConfig.enableHwLoadBalancing != 0)) ?
-					 -1 : // all available HW decoders
-					  1;  // only one HW decoder instance
+                                     -1 : // all available HW decoders
+                                      1;  // only one HW decoder instance
+
+    VkQueueFlags requestVideoDecodeQueueMask = VK_QUEUE_VIDEO_DECODE_BIT_KHR;
+
+    VkQueueFlags requestVideoEncodeQueueMask = 0;
+    if (programConfig.enableVideoEncoder) {
+        requestVideoEncodeQueueMask |= VK_QUEUE_VIDEO_ENCODE_BIT_KHR;
+    }
+
+    if (programConfig.selectVideoWithComputeQueue) {
+        requestVideoDecodeQueueMask |= VK_QUEUE_COMPUTE_BIT;
+        if (programConfig.enableVideoEncoder) {
+            requestVideoEncodeQueueMask |= VK_QUEUE_COMPUTE_BIT;
+        }
+    }
+
+    VkQueueFlags requestVideoComputeQueueMask = 0;
+    if (programConfig.enablePostProcessFilter != -1) {
+        requestVideoComputeQueueMask = VK_QUEUE_COMPUTE_BIT;
+    }
+
+    VkSharedBaseObj<VulkanVideoProcessor> vulkanVideoProcessor;
+    result = VulkanVideoProcessor::Create(programConfig, &vkDevCtxt, vulkanVideoProcessor);
+    if (result != VK_SUCCESS) {
+        return -1;
+    }
+
+    VkSharedBaseObj<VkVideoQueue<VulkanDecodedFrame>> videoQueue(vulkanVideoProcessor);
+    VkSharedBaseObj<FrameProcessor> frameProcessor;
+    result = CreateDecoderFrameProcessor(&vkDevCtxt, videoQueue, frameProcessor);
+    if (result != VK_SUCCESS) {
+        return -1;
+    }
+
+    VkVideoCodecOperationFlagsKHR videoDecodeCodecs = (VK_VIDEO_CODEC_OPERATION_DECODE_H264_BIT_KHR  |
+                                                       VK_VIDEO_CODEC_OPERATION_DECODE_H265_BIT_KHR  |
+                                                       VK_VIDEO_CODEC_OPERATION_DECODE_AV1_BIT_KHR   |
+                                                       VK_VIDEO_CODEC_OPERATION_DECODE_VP9_BIT_KHR);
+
+    VkVideoCodecOperationFlagsKHR videoEncodeCodecs = ( VK_VIDEO_CODEC_OPERATION_ENCODE_H264_BIT_KHR  |
+                                                        VK_VIDEO_CODEC_OPERATION_ENCODE_H265_BIT_KHR  |
+                                                        VK_VIDEO_CODEC_OPERATION_ENCODE_AV1_BIT_KHR);
+
+    VkVideoCodecOperationFlagsKHR videoCodecs = videoDecodeCodecs |
+                                        (programConfig.enableVideoEncoder ? videoEncodeCodecs : VK_VIDEO_CODEC_OPERATION_NONE_KHR);
+
+
     if (supportsDisplay && !programConfig.noPresent) {
 
         VkSharedBaseObj<Shell> displayShell;
@@ -111,9 +157,21 @@ int main(int argc, const char **argv) {
             return -1;
         }
 
-        result = vkDevCtxt.InitPhysicalDevice((VK_QUEUE_GRAPHICS_BIT |
-                                               VK_QUEUE_VIDEO_DECODE_BIT_KHR),
-                                               displayShell);
+        result = vkDevCtxt.InitPhysicalDevice(programConfig.deviceId, programConfig.GetDeviceUUID(),
+                                              (VK_QUEUE_GRAPHICS_BIT | VK_QUEUE_TRANSFER_BIT |
+                                              requestVideoComputeQueueMask |
+                                              requestVideoDecodeQueueMask |
+                                              requestVideoEncodeQueueMask),
+                                              displayShell,
+                                              requestVideoDecodeQueueMask,
+                                              (VK_VIDEO_CODEC_OPERATION_DECODE_H264_BIT_KHR |
+                                               VK_VIDEO_CODEC_OPERATION_DECODE_H265_BIT_KHR |
+                                               VK_VIDEO_CODEC_OPERATION_DECODE_AV1_BIT_KHR  |
+                                               VK_VIDEO_CODEC_OPERATION_DECODE_VP9_BIT_KHR),
+                                              requestVideoEncodeQueueMask,
+                                              (VK_VIDEO_CODEC_OPERATION_ENCODE_H264_BIT_KHR |
+                                               VK_VIDEO_CODEC_OPERATION_ENCODE_H265_BIT_KHR |
+                                               VK_VIDEO_CODEC_OPERATION_ENCODE_AV1_BIT_KHR));
         if (result != VK_SUCCESS) {
 
             assert(!"Can't initialize the Vulkan physical device!");
