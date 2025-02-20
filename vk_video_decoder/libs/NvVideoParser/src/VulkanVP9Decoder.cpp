@@ -133,7 +133,6 @@ bool VulkanVP9Decoder::ParseByteStream(const VkParserBitstreamPacket* pck, size_
             uint32_t frames_processed = 0;
             uint32_t sizeparsed = 0, framesdone = 0;
 
-            uint32_t frame_start = 0;
             uint32_t frame_size = m_frameSize;
 
             const uint8_t* data_start = m_bitstreamData.GetBitstreamPtr();
@@ -172,10 +171,6 @@ bool VulkanVP9Decoder::ParseByteStream(const VkParserBitstreamPacket* pck, size_
                     data_size = frame_size;
                     m_nalu.start_offset = sizeparsed;
 
-                    frame_start = 0;
-                    for (uint32_t i = 1; i <= frames_processed; i++) {
-                        frame_start += frame_sizes[i - 1];
-                    }
                 }
 
                 ParseFrameHeader(frame_size);
