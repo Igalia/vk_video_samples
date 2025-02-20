@@ -21,8 +21,6 @@
 #include <climits>
 
 #include "VulkanVideoDecoder.h"
-#include "vk_video/vulkan_video_codec_av1std.h"
-#include "vk_video/vulkan_video_codec_av1std_decode.h"
 
 #define VP9_FRAME_MARKER 2
 #define VP9_FRAME_SYNC_CODE 0x498342
