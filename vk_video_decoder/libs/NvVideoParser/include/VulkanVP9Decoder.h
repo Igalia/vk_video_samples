@@ -111,13 +111,13 @@ public:
     ~VulkanVP9Decoder();
 
     // TODO: Need to implement these functions.
-    bool                    IsPictureBoundary(int32_t) { return true; };
-    int32_t                 ParseNalUnit() { return NALU_UNKNOWN; };
+    bool                    IsPictureBoundary(int32_t) override { return true; };
+    int32_t                 ParseNalUnit() override { return NALU_UNKNOWN; };
     bool                    DecodePicture(VkParserPictureData *) { return false; };
-    void                    InitParser();
-    bool                    BeginPicture(VkParserPictureData *);
-    void                    CreatePrivateContext() {}
-    void                    FreeContext() {}
+    void                    InitParser() override;
+    bool                    BeginPicture(VkParserPictureData *) override;
+    void                    CreatePrivateContext() override {}
+    void                    FreeContext() override {}
 
 private:
     bool                    ParseByteStream(const VkParserBitstreamPacket* pck, size_t* pParsedBtes) override;
