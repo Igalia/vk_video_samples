@@ -119,7 +119,7 @@ public:
 
 private:
     bool                    ParseByteStream(const VkParserBitstreamPacket* pck, size_t* pParsedBtes) override;
-    bool                    ParseFrameHeader(const uint8_t* pBitstream, uint32_t framesize);
+    bool                    ParseFrameHeader(uint32_t framesize);
     bool                    ParseUncompressedHeader();
     bool                    ParseColorConfig();
     void                    ParseFrameAndRenderSize();
