@@ -60,14 +60,6 @@ typedef struct StdVideoDecodeVP9PictureInfo {
     const StdVideoVP9Segmentation*       pSegmentation;
 } StdVideoDecodeVP9PictureInfo;
 
-typedef struct StdVideoDecodeVP9ReferenceInfoFlags {
-    uint32_t    reserved : 32;
-} StdVideoDecodeVP9ReferenceInfoFlags;
-
-typedef struct StdVideoDecodeVP9ReferenceInfo {
-    StdVideoDecodeVP9ReferenceInfoFlags    flags;
-} StdVideoDecodeVP9ReferenceInfo;
-
 
 #ifdef __cplusplus
 }
