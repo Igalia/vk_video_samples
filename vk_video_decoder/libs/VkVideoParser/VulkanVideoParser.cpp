@@ -185,16 +185,7 @@ struct nvVideoDecodeVP9DpbSlotInfo
         // Number of reference frame types (including intra type)
         TOTAL_REFS_PER_FRAME = 8,
     };
-    VkVideoDecodeVP9DpbSlotInfoKHR dpbSlotInfo{};
-    StdVideoDecodeVP9ReferenceInfo stdReferenceInfo;
-    const VkVideoDecodeVP9DpbSlotInfoKHR* Init(int8_t slotIndex)
-    {
-        assert((slotIndex >= 0) && (slotIndex < (int8_t)TOTAL_REFS_PER_FRAME));
-        dpbSlotInfo.sType = VK_STRUCTURE_TYPE_VIDEO_DECODE_VP9_DPB_SLOT_INFO_KHR;
-        dpbSlotInfo.pNext = nullptr;
-        dpbSlotInfo.pStdReferenceInfo = &stdReferenceInfo;
-        return &dpbSlotInfo;
-    }
+    VkExtent2D codedExtent{};
 
     void Invalidate() { memset(this, 0x00, sizeof(*this)); }
 
@@ -1963,11 +1954,8 @@ uint32_t VulkanVideoParser::FillDpbVP9State(
                 continue;
             }
 
-            VkVideoDecodeVP9DpbSlotInfoKHR &dpbSlotInfo = pDpbSlotInfo[referenceIndex].dpbSlotInfo;
-            dpbSlotInfo.sType = VK_STRUCTURE_TYPE_VIDEO_DECODE_VP9_DPB_SLOT_INFO_KHR;
-            dpbSlotInfo.pStdReferenceInfo = &pin->stdReferenceInfo[inIdx];
             pReferenceSlots[referenceIndex].sType = VK_STRUCTURE_TYPE_VIDEO_REFERENCE_SLOT_INFO_KHR;
-            pReferenceSlots[referenceIndex].pNext = &dpbSlotInfo;
+            pReferenceSlots[referenceIndex].pNext = nullptr;
             pReferenceSlots[referenceIndex].slotIndex = dpbSlot;
             pGopReferenceImagesIndexes[referenceIndex] = picIdx;
 
