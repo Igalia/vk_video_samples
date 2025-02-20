@@ -286,7 +286,6 @@ bool VulkanVP9Decoder::ParseFrameHeader(const uint8_t* pBitstream, uint32_t fram
 
 void VulkanVP9Decoder::UpdateFramePointers(VkPicIf* currentPicture)
 {
-    VkParserVp9PictureData* const pPicData = &m_PicData;
     StdVideoDecodeVP9PictureInfo* const pStdPicInfo = &m_PicData.stdPictureInfo;
 
     uint32_t mask, ref_index = 0;
@@ -532,7 +531,6 @@ bool VulkanVP9Decoder::ParseColorConfig()
 void VulkanVP9Decoder::ParseFrameAndRenderSize()
 {
     VkParserVp9PictureData *pPicData = &m_PicData;
-    StdVideoDecodeVP9PictureInfo* pStdPicInfo = &m_PicData.stdPictureInfo;
 
     pPicData->FrameWidth = u(16) + 1;
     pPicData->FrameHeight = u(16) + 1;
@@ -690,7 +688,6 @@ void VulkanVP9Decoder::ParseSegmentationParams()
     uint8_t segmentation_feature_bits[STD_VIDEO_VP9_SEG_LVL_MAX] = { 8, 6, 2, 0};
     uint8_t segmentation_feature_signed[STD_VIDEO_VP9_SEG_LVL_MAX] = {1, 1, 0, 0};
 
-    VkParserVp9PictureData* pPicData = &m_PicData;
     StdVideoDecodeVP9PictureInfo* pStdPicInfo = &m_PicData.stdPictureInfo;
     StdVideoVP9Segmentation* pSegment = &m_PicData.stdSegmentation;
 
@@ -831,8 +828,7 @@ bool VulkanVP9Decoder::BeginPicture(VkParserPictureData* pnvpd)
 
     uint32_t width = pPicDataVP9->FrameWidth;
     uint32_t height = pPicDataVP9->FrameHeight;
-    uint32_t width16 = (width + 15) & ~15;
-    uint32_t height16 = (height + 15) & ~15;
+
 
     VkParserSequenceInfo nvsi = m_ExtSeqInfo;
     nvsi.eCodec = VK_VIDEO_CODEC_OPERATION_DECODE_VP9_BIT_KHR;
