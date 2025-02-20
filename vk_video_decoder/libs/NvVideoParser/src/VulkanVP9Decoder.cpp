@@ -559,8 +559,8 @@ void VulkanVP9Decoder::ParseFrameAndRenderSizeWithRefs()
         if (found_ref) {
             VkPicIf* pRefPic = m_pBuffers[pPicData->ref_frame_idx[i]].buffer;
             if (pRefPic != nullptr) {
-                pPicData->FrameWidth = pRefPic->decodeWidth;
-                pPicData->FrameHeight = pRefPic->decodeHeight;
+                pPicData->FrameWidth = pRefPic->frameWidth;
+                pPicData->FrameHeight = pRefPic->frameHeight;
 
                 ComputeImageSize();
             }
@@ -874,11 +874,11 @@ bool VulkanVP9Decoder::BeginPicture(VkParserPictureData* pnvpd)
 
     // Allocate a buffer for the current picture
     if (m_pCurrPic == nullptr) {
-        m_pClient->AllocPictureBuffer(&m_pCurrPic);
+        m_pClient->AllocPictureBuffer(&m_pCurrPic, width, height);
         assert(m_pCurrPic);
 
-        m_pCurrPic->decodeWidth = width;
-        m_pCurrPic->decodeHeight = height;
+        m_pCurrPic->frameWidth = width;
+        m_pCurrPic->frameHeight = height;
     }
 
     pnvpd->PicWidthInMbs = nvsi.nCodedWidth >> 4;
