@@ -73,6 +73,20 @@ bool VulkanVP9Decoder::ParseByteStream(const VkParserBitstreamPacket* pck, size_
         *pParsedBytes = 0;
     }
 
+    // Use different bitstreamBuffer than the previous frames bitstreamBuffer
+    // TODO: Make sure that the bitstreamBuffer is not in use.
+    VkSharedBaseObj<VulkanBitstreamBuffer> bitstreamBuffer;
+    assert(m_pClient);
+    m_pClient->GetBitstreamBuffer(m_bitstreamDataLen,
+                                  m_bufferOffsetAlignment, m_bufferSizeAlignment,
+                                  nullptr, 0, bitstreamBuffer);
+    assert(bitstreamBuffer);
+    if (!bitstreamBuffer) {
+        return false;
+    }
+    m_bitstreamDataLen = m_bitstreamData.SetBitstreamBuffer(bitstreamBuffer);
+    m_bitstreamData.ResetStreamMarkers();
+
     if (m_bitstreamData.GetBitstreamBuffer() == nullptr) {
         // make sure we're initialized
         return false;
