@@ -381,7 +381,9 @@ bool VulkanVP9Decoder::ParseUncompressedHeader()
 
     VP9_CHECK_FRAME_MARKER;
 
-    pStdPicInfo->profile = (StdVideoVP9Profile)(u(1) | (u(1) << 1));
+    uint32_t profile = u(1);
+    profile |= u(1) << 1;
+    pStdPicInfo->profile = (StdVideoVP9Profile)profile;
     if (pStdPicInfo->profile == STD_VIDEO_VP9_PROFILE_3) {
         if (u(1) != 0) {
             assert(!"Invalid syntax");
