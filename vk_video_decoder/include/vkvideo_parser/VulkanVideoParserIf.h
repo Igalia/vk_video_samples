@@ -347,7 +347,6 @@ typedef struct VkParserVp9PictureData {
 
     // other derived parameters
     bool     FrameIsIntra;
-    uint8_t  BitDepth;
     uint8_t  ChromaFormat;
     uint32_t numTiles;
     uint32_t compressedHeaderSize;
