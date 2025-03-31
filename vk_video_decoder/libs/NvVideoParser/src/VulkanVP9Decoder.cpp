@@ -430,7 +430,7 @@ bool VulkanVP9Decoder::ParseUncompressedHeader()
                 pStdColorConfig->color_space = STD_VIDEO_VP9_COLOR_SPACE_BT_601;
                 pStdColorConfig->subsampling_x = 1;
                 pStdColorConfig->subsampling_y = 1;
-                pPicData->BitDepth = 8;
+                pStdColorConfig->BitDepth = 8;
             }
 
             pStdPicInfo->refresh_frame_flags = u(STD_VIDEO_VP9_NUM_REF_FRAMES); //for non key frame refresh only some
@@ -504,14 +504,13 @@ bool VulkanVP9Decoder::ParseUncompressedHeader()
 
 bool VulkanVP9Decoder::ParseColorConfig()
 {
-    VkParserVp9PictureData* pPicData = &m_PicData;
     StdVideoDecodeVP9PictureInfo* pStdPicInfo = &m_PicData.stdPictureInfo;
     StdVideoVP9ColorConfig* pStdColorConfig = &m_PicData.stdColorConfig;
 
     if (pStdPicInfo->profile >= STD_VIDEO_VP9_PROFILE_2) {
-        pPicData->BitDepth = u(1) ? 12 : 10;
+        pStdColorConfig->BitDepth = u(1) ? 12 : 10;
     } else {
-        pPicData->BitDepth = 8;
+        pStdColorConfig->BitDepth = 8;
     }
 
     pStdColorConfig->color_space = (StdVideoVP9ColorSpace)u(3);
@@ -837,6 +836,7 @@ void VulkanVP9Decoder::ParseSuperFrameIndex(const uint8_t* data, uint32_t data_s
 bool VulkanVP9Decoder::BeginPicture(VkParserPictureData* pnvpd)
 {
     VkParserVp9PictureData* const pPicDataVP9 = &pnvpd->CodecSpecific.vp9;
+    StdVideoVP9ColorConfig* pStdColorConfig = &pPicDataVP9->stdColorConfig;
 
     uint32_t width = pPicDataVP9->FrameWidth;
     uint32_t height = pPicDataVP9->FrameHeight;
@@ -853,8 +853,8 @@ bool VulkanVP9Decoder::BeginPicture(VkParserPictureData* pnvpd)
     nvsi.nDisplayHeight = height;
     nvsi.bProgSeq = true; // VP9 doesn't have explicit interlaced coding.
     nvsi.nMinNumDecodeSurfaces = 9;
-    nvsi.uBitDepthLumaMinus8 = pPicDataVP9->BitDepth - 8;
-    nvsi.uBitDepthChromaMinus8 = pPicDataVP9->BitDepth - 8;
+    nvsi.uBitDepthLumaMinus8 = pStdColorConfig->BitDepth - 8;
+    nvsi.uBitDepthChromaMinus8 = pStdColorConfig->BitDepth - 8;
     nvsi.lDARWidth = pPicDataVP9->renderWidth;
     nvsi.lDARHeight = pPicDataVP9->renderHeight;
 
