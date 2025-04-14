@@ -845,23 +845,23 @@ bool VulkanVP9Decoder::BeginPicture(VkParserPictureData* pnvpd)
     VkParserSequenceInfo nvsi = m_ExtSeqInfo;
     nvsi.eCodec = VK_VIDEO_CODEC_OPERATION_DECODE_VP9_BIT_KHR;
     nvsi.nChromaFormat = pPicDataVP9->ChromaFormat;
-    //nvsi.nMaxWidth = width; // TODO: How get max width and height??
-    //nvsi.nMaxHeight = height;
+    nvsi.nMaxWidth = std::max(width, pPicDataVP9->renderWidth);
+    nvsi.nMaxHeight = std::max(height, pPicDataVP9->renderHeight);
     nvsi.nCodedWidth = width;
     nvsi.nCodedHeight = height;
-    nvsi.nDisplayWidth = width;
-    nvsi.nDisplayHeight = height;
+    nvsi.nDisplayWidth = pPicDataVP9->renderWidth;
+    nvsi.nDisplayHeight = pPicDataVP9->renderHeight;
+    nvsi.lDARWidth = pPicDataVP9->renderWidth;
+    nvsi.lDARHeight = pPicDataVP9->renderHeight;
     nvsi.bProgSeq = true; // VP9 doesn't have explicit interlaced coding.
     nvsi.nMinNumDecodeSurfaces = 9;
     nvsi.uBitDepthLumaMinus8 = pStdColorConfig->BitDepth - 8;
     nvsi.uBitDepthChromaMinus8 = pStdColorConfig->BitDepth - 8;
-    nvsi.lDARWidth = pPicDataVP9->renderWidth;
-    nvsi.lDARHeight = pPicDataVP9->renderHeight;
 
     // Reset decoder only if decode RT orig width is less than required coded width
-    if ((nvsi.nCodedWidth > m_rtOrigWidth) || (nvsi.nCodedHeight > m_rtOrigHeight)) {
-        m_rtOrigWidth = nvsi.nCodedWidth;
-        m_rtOrigHeight = nvsi.nCodedHeight;
+    if ((nvsi.nMaxWidth > m_rtOrigWidth) || (nvsi.nMaxHeight > m_rtOrigHeight)) {
+        m_rtOrigWidth = nvsi.nMaxWidth;
+        m_rtOrigHeight = nvsi.nMaxHeight;
 
         for (int i = 0; i < 8; i++) {
             if (m_pBuffers[i].buffer != nullptr) {
