@@ -837,6 +837,7 @@ bool VulkanVP9Decoder::BeginPicture(VkParserPictureData* pnvpd)
 {
     VkParserVp9PictureData* const pPicDataVP9 = &pnvpd->CodecSpecific.vp9;
     StdVideoVP9ColorConfig* pStdColorConfig = &pPicDataVP9->stdColorConfig;
+    StdVideoDecodeVP9PictureInfo* pStdPicInfo = &m_PicData.stdPictureInfo;
 
     uint32_t width = pPicDataVP9->FrameWidth;
     uint32_t height = pPicDataVP9->FrameHeight;
@@ -857,6 +858,7 @@ bool VulkanVP9Decoder::BeginPicture(VkParserPictureData* pnvpd)
     nvsi.nMinNumDecodeSurfaces = 9;
     nvsi.uBitDepthLumaMinus8 = pStdColorConfig->BitDepth - 8;
     nvsi.uBitDepthChromaMinus8 = pStdColorConfig->BitDepth - 8;
+    nvsi.codecProfile = pStdPicInfo->profile;
 
     // Reset decoder only if decode RT orig width is less than required coded width
     if ((nvsi.nMaxWidth > m_rtOrigWidth) || (nvsi.nMaxHeight > m_rtOrigHeight)) {
