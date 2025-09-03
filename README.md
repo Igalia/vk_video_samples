@@ -1,3 +1,7 @@
+
+# ⚠️ DEPRECATED
+This repository is no longer maintained. Please use [Khronos Vulkan-Video-Samples](https://github.com/KhronosGroup/Vulkan-Video-Samples) instead.
+
 # DO NOT USE THIS OUTSIDE OF THE VULKAN CONFORMANCE SUITE
 
 Unfortunately, the CTS started using this project originally without
